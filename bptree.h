@@ -23,6 +23,9 @@ enum bptr_key_type
 };
 /*----------------------------- Public Enums END -----------------------------*/
 
+/*----------------------- Public Variable Declaration ------------------------*/
+extern int bptr_errno;
+/*--------------------- Public Variable Declaration END ----------------------*/
 /*----------------------------- Public Functions -----------------------------*/
 struct bptree *bptr_init
 (
@@ -32,12 +35,13 @@ struct bptree *bptr_init
    uint8_t key_type,
    uint16_t value_size
 );
-struct bptree *bptr_load();
+struct bptree *bptr_load(const char *filename);
 int bptr_insert(struct bptree *this, const void *kv);
 int bptr_erase(struct bptree *this, const void *key);
 const void *bptr_find(struct bptree *this, const void *key);
 int bptr_find_range(struct bptree *this, const void *bg, const void *ed,
                     void **res_it);
+int bptr_destroy(struct bptree *this);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif

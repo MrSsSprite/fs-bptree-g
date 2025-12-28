@@ -11,21 +11,22 @@
 #define _bptr_boundry_set(ref_exp, value_sz) do \
 {  /* t >= (rem_sz / kv_sz + 1) / 2 */ \
    (ref_exp).t_value = \
-      (  (node_size - BPTR_NODE_METADATA_BYTE - (value_sz)) / \
-         (_bptr_key_size(key_type) + (value_sz)) + 1 \
+      (  (this->node_size - BPTR_NODE_METADATA_BYTE - (value_sz)) / \
+         (_bptr_key_size(this->data_info.key_type) + (value_sz)) + 1 \
       ) / 2; \
-   if ((ref_exp).t_value <= 2) goto INVALID_T_VAL_ERROR; \
+   if ((ref_exp).t_value <= 2) goto INVALID_T_VAL_ERR; \
    (ref_exp).low = (ref_exp).t_value - 2; \
    (ref_exp).up = 2 * (ref_exp).t_value; \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
 
-/*----------------------- Private Function Declaration -----------------------*/
-inline uint_fast16_t _bptr_key_size(uint8_t key_type);
-   /*--------------------- Private Function Declaration END ---------------------*/
+/*----------------------------- Public Variable ------------------------------*/
+int bptr_errno;
+/*--------------------------- Public Variable END ----------------------------*/
 
 
+/*------------------------ Public Function Definition ------------------------*/
 struct bptree *bptr_init
 (
    const char *filename,
@@ -51,13 +52,12 @@ struct bptree *bptr_init
    this->version = BPTR_CURRENT_VERSION;
    this->is_lite = is_lite;
    this->block_size = BPTR_BLOCK_BYTE;
-   this->ptr_sz = is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE;
    this->free_list.head = this->free_list.size = this->root_pointer = 0;
    this->node_size = node_size;
    /* t >= (rem_sz / kv_sz + 1) / 2 */
-   _bptr_boundry_set(this->node_boundry.internal, this->ptr_sz);
-   _bptr_boundry_set(this->node_boundry.leaf, value_size);
    this->data_info.key_type = key_type;
+   _bptr_boundry_set(this->node_boundry.internal, BPTR_PTR_SIZE);
+   _bptr_boundry_set(this->node_boundry.leaf, value_size);
    this->data_info.value_size = value_size;
    this->stats.record_count = 0;
    this->stats.node_count = 0;
@@ -65,35 +65,53 @@ struct bptree *bptr_init
 
    /* Construct the file */
    if (bptr_fcreat(this, filename)) 
-      goto FOPEN_ERROR;
+      goto FOPEN_ERR;
 
    return this;
 
 /* Error Handle */
-INVALID_T_VAL_ERROR:
-FOPEN_ERROR:
+FOPEN_ERR:
+INVALID_T_VAL_ERR:
    free(this);
    return NULL;
 }
 
 
-inline uint_fast16_t _bptr_key_size(uint8_t key_type)
+struct bptree *bptr_load(const char *filename)
 {
-   switch (key_type)
-    {
-   case BPTR_KYTP_I8:
-   case BPTR_KYTP_U8:
-      return 1;
-   case BPTR_KYTP_I16:
-   case BPTR_KYTP_U16:
-      return 2;
-   case BPTR_KYTP_I32:
-   case BPTR_KYTP_U32:
-      return 4;
-   case BPTR_KYTP_I64:
-   case BPTR_KYTP_U64:
-      return 8;
-    }
+   struct bptree *this;
+   int fn_ret;
 
-   return 0;
+   /* malloc for the handler */
+   this = malloc(sizeof (struct bptree));
+   if (this == NULL) return NULL;
+
+   fn_ret = bptr_fload(this, filename);
+   if (fn_ret)
+    {
+      bptr_errno = 1;
+      goto FLOAD_ERR;
+    }
+   _bptr_boundry_set(this->node_boundry.internal, BPTR_PTR_SIZE);
+   _bptr_boundry_set(this->node_boundry.leaf, this->data_info.value_size);
+
+   return this;
+
+INVALID_T_VAL_ERR:
+   bptr_fclose(this);
+FLOAD_ERR:
+   free(this);
+   return NULL;
 }
+
+int bptr_destroy(struct bptree *this)
+{
+   int err_code = 0;
+   
+   if (bptr_fclose(this))
+      err_code = 1;
+   free(this);
+
+   return err_code;
+}
+/*---------------------- Public Function Definition END ----------------------*/
