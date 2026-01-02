@@ -193,7 +193,7 @@ int bptr_dump_handler(const struct bptree *this, FILE *stream)
    fprintf(stream, "Statistics:\n");
    fprintf(stream, "  record_count:        %" PRIuFAST64 "\n", this->stats.record_count);
    fprintf(stream, "  node_count:          %" PRIuFAST64 "\n", this->stats.node_count);
-   fprintf(stream, "  tree_height:         %" PRIuFAST32 "n", this->stats.tree_height);
+   fprintf(stream, "  tree_height:         %" PRIuFAST32 "\n", this->stats.tree_height);
    fprintf(stream, "\n");
 
    fprintf(stream, "==========================================\n");
