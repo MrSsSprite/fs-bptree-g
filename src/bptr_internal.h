@@ -19,6 +19,11 @@
 #define BPTR_BLOCK_BYTE          512
 /*---------------------------- Public Defines END ----------------------------*/
 
+
+/*----------------------------- Public Typedefs ------------------------------*/
+typedef uint_fast64_t bptr_node_t;
+/*--------------------------- Public Typedefs END ----------------------------*/
+
 /*------------------------------ Public Macros -------------------------------*/
 #define BPTR_PTR_SIZE (this->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE)
 /*---------------------------- Public Macros END -----------------------------*/
@@ -51,12 +56,8 @@ struct bptree
    node_boundry;
 
    /* データ型 */
-   struct
-    {
-       uint_fast8_t key_type;
-       uint_fast16_t value_size;
-    }
-   data_info;
+   uint_fast8_t key_type;
+   uint_fast16_t value_size;
 
    /* メモリ管理 */
    struct
@@ -66,13 +67,9 @@ struct bptree
    free_list;
 
    /* 統計情報 */
-   struct
-    {
-       uint_fast64_t record_count;
-       uint_fast64_t node_count;
-       uint_fast32_t tree_height;
-    }
-   stats;
+   uint_fast64_t record_count;
+   uint_fast64_t node_count;
+   uint_fast32_t tree_height;
 };
 /*---------------------------- Public Structs END ----------------------------*/
 

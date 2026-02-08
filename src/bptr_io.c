@@ -17,7 +17,7 @@
    memit += (uptr_size); \
    *(uptr_type*)memit = this->free_list.size; \
    memit += (uptr_size); \
-   *(uptr_type*)memit = this->stats.node_count; \
+   *(uptr_type*)memit = this->node_count; \
    memit += (uptr_size); \
 } while (0)
 
@@ -26,7 +26,7 @@
    this->root_pointer = *(uptr_type*)memit; memit += (uptr_size); \
    this->free_list.head = *(uptr_type*)memit; memit += (uptr_size); \
    this->free_list.size = *(uptr_type*)memit; memit += (uptr_size); \
-   this->stats.node_count = *(uptr_type*)memit; memit += (uptr_size); \
+   this->node_count = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
@@ -65,14 +65,14 @@ int bptr_fcreat(struct bptree *this, const char *filename)
    *(uint32_t*)memit = this->node_size;
    memit += 4;
 
-   *(uint8_t*)memit = this->data_info.key_type;
+   *(uint8_t*)memit = this->key_type;
    memit += 1;
-   *(uint16_t*)memit = this->data_info.value_size;
+   *(uint16_t*)memit = this->value_size;
    memit += 3; // +1 for padding
 
-   *(uint64_t*)memit = this->stats.record_count;
+   *(uint64_t*)memit = this->record_count;
    memit += 8;
-   *(uint32_t*)memit = this->stats.tree_height;
+   *(uint32_t*)memit = this->tree_height;
    memit += 4;
    if (this->is_lite)
       _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
@@ -163,13 +163,13 @@ int bptr_fload(struct bptree *this, const char *filename)
    memit = this->fbuf + 12;
    this->node_size = *(uint32_t*)memit;
    memit += 4;
-   this->data_info.key_type = *(uint8_t*)memit;
+   this->key_type = *(uint8_t*)memit;
    memit += 1;
-   this->data_info.value_size = *(uint16_t*)memit;
+   this->value_size = *(uint16_t*)memit;
    memit += 3; // +1 for padding
-   this->stats.record_count = *(uint64_t*)memit;
+   this->record_count = *(uint64_t*)memit;
    memit += 8;
-   this->stats.tree_height = *(uint32_t*)memit;
+   this->tree_height = *(uint32_t*)memit;
    memit += 4;
    if (this->is_lite)
       _bptr_fload_read_uptr_metadata(BPTR_LITE_PTR_TYPE, BPTR_LITE_PTR_BYTE);
@@ -198,8 +198,64 @@ int bptr_fclose(struct bptree *this)
 
    return err_code;
 }
+
+
+int bptr_fread_node(struct bptree *this, bptr_node_t node_idx)
+{
+   long offset = node_idx * this->node_size;
+
+   
+   if (fseek(this->file, offset, SEEK_SET))
+      return 1;
+
+   if (fread(this->fbuf, this->node_size, 1, this->file) != 1)
+      return 2;
+
+   return 0;
+}
+
+
+bptr_node_t bptr_flush_node(struct bptree *this, bptr_node_t node_idx)
+{
+   long pos;
+
+   if (node_idx == 0)
+    {
+      if (fseek(this->file, 0, SEEK_END))
+       {
+         bptr_errno = 1;
+         return 0;
+       }
+    }
+   else
+    {
+      if (fseek(this->file, node_idx * this->node_size, SEEK_SET))
+       {
+         bptr_errno = 1;
+         return 0;
+       }
+    }
+
+   // calculate the location of node in block size
+   pos = ftell(this->file);
+   if (pos == -1L)
+    {
+      bptr_errno = 2;
+      return 0;
+    }
+   pos /= this->block_size;
+
+   if (fwrite(this->fbuf, this->node_size, 1, this->file) != 1)
+    {
+      bptr_errno = 3;
+      return 0;
+    }
+   if (fflush(this->file))
+    {
+      bptr_errno = 4;
+      return 0;
+    }
+
+   return pos;
+}
 /*--------------------------- Public Functions END ---------------------------*/
-
-
-/*---------------------------- Private Functions -----------------------------*/
-/*-------------------------- Private Functions END ---------------------------*/

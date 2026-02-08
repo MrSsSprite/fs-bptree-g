@@ -21,6 +21,8 @@ int bptr_fload(struct bptree *this, const char *filename);
  * @return  0 on success. Otherwise, the error code is returned.
  */
 int bptr_fclose(struct bptree *this);
+int bptr_fread_node(struct bptree *this, bptr_node_t node_idx);
+bptr_node_t bptr_flush_node(struct bptree *this, bptr_node_t node_idx);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif

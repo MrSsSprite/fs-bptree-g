@@ -1,0 +1,3 @@
+[submodule "external/data_structures"]
+	path = external/data_structures
+	url = https://github.com/MrSsSprite/data_structures.git
