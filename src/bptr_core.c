@@ -2,21 +2,29 @@
 #include "../bptree.h"
 #include "bptr_internal.h"
 #include "bptr_io.h"
+#include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
 /*--------------------------- Private Includes END ---------------------------*/
 
 
 /*------------------------------ Private Macros ------------------------------*/
-#define _bptr_boundry_set(ref_exp, value_sz) do \
+#define _bptr_boundry_set(self) do \
 {  /* t >= (rem_sz / kv_sz + 1) / 2 */ \
-   (ref_exp).t_value = \
-      (  (this->node_size - BPTR_NODE_METADATA_BYTE - (value_sz)) / \
-         (_bptr_key_size(this->key_type) + (value_sz)) + 1 \
-      ) / 2; \
-   if ((ref_exp).t_value <= 2) goto INVALID_T_VAL_ERR; \
-   (ref_exp).low = (ref_exp).t_value - 2; \
-   (ref_exp).up = 2 * (ref_exp).t_value; \
+   uint_fast32_t rem_sz = (self)->node_size - BPTR_NODE_METADATA_BYTE; \
+   (self)->node_boundry.brch.up = \
+   (rem_sz - BPTR_PTR_SIZE) / ((self)->key_size + BPTR_PTR_SIZE) + 1; \
+   if ((self)->node_boundry.brch.up < 3) \
+    { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
+   (self)->node_boundry.brch.low = CEIL_DIV((self)->node_boundry.brch.up, 2) - 2; \
+   /* should be B/(K + V) + 1; +1 is detained so that B/(K+V) can be used for \
+    * temporary storage. \
+    */ \
+   (self)->node_boundry.leaf.up = rem_sz / ((self)->key_size + (self)->value_size); \
+   if ((self)->node_boundry.leaf.up < 1) \
+    { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
+   (self)->node_boundry.leaf.low = CEIL_DIV((self)->node_boundry.leaf.up, 2) - 1; \
+   (self)->node_boundry.leaf.up += 1; \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
@@ -54,11 +62,9 @@ struct bptree *bptr_init
    self->block_size = BPTR_BLOCK_BYTE;
    self->free_list.head = self->free_list.size = self->root_pointer = 0;
    self->node_size = node_size;
-   /* t >= (rem_sz / kv_sz + 1) / 2 */
    self->key_size = key_size;
-   _bptr_boundry_set(self->node_boundry.internal, BPTR_PTR_SIZE);
-   _bptr_boundry_set(self->node_boundry.leaf, value_size);
    self->value_size = value_size;
+   _bptr_boundry_set(self);
    self->record_count = 0;
    self->node_count = 0;
    self->tree_height = 0;
@@ -71,7 +77,7 @@ struct bptree *bptr_init
 
 /* Error Handle */
 FOPEN_ERR:
-INVALID_T_VAL_ERR:
+INVALID_FANOUT_ERR:
    free(self);
    return NULL;
 }
@@ -92,12 +98,11 @@ struct bptree *bptr_load(const char *filename)
       bptr_errno = 1;
       goto FLOAD_ERR;
     }
-   _bptr_boundry_set(self->node_boundry.internal, BPTR_PTR_SIZE);
-   _bptr_boundry_set(self->node_boundry.leaf, self->value_size);
+   _bptr_boundry_set(self);
 
    return self;
 
-INVALID_T_VAL_ERR:
+INVALID_FANOUT_ERR:
    bptr_fclose(self);
 FLOAD_ERR:
    free(self);

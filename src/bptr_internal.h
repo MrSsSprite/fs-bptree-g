@@ -25,7 +25,7 @@ typedef uint_fast64_t bptr_node_t;
 /*--------------------------- Public Typedefs END ----------------------------*/
 
 /*------------------------------ Public Macros -------------------------------*/
-#define BPTR_PTR_SIZE (this->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE)
+#define BPTR_PTR_SIZE (self->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE)
 /*---------------------------- Public Macros END -----------------------------*/
 
 /*----------------------------- Public Structs ------------------------------*/
@@ -48,7 +48,7 @@ struct bptree
     {
       struct _bptr_node_boundry
        { uint_fast16_t low, up; }
-      leaf, internal;
+      leaf, brch;
     }
    node_boundry;
 
