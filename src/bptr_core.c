@@ -30,95 +30,95 @@ int bptr_errno;
 struct bptree *bptr_init
 (
    const char *filename,
-   int is_lite,
+   _Bool is_lite,
    uint32_t node_size,
-   uint8_t key_type,
+   uint16_t key_size,
    uint16_t value_size
 )
 {
-   struct bptree *this;
+   struct bptree *self;
 
    /* Node must be large enough to at least contain
     * the metadata, 1 key and 2 childs */
-   if (node_size < BPTR_NODE_METADATA_BYTE + _bptr_key_size(key_type) +
+   if (node_size < BPTR_NODE_METADATA_BYTE + key_size +
                    (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2)
       return NULL;
 
    /* malloc for the handler */
-   this = malloc(sizeof (struct bptree));
-   if (this == NULL) return NULL;
+   self = malloc(sizeof (struct bptree));
+   if (self == NULL) return NULL;
 
    /* Write Metadata */
-   this->version = BPTR_CURRENT_VERSION;
-   this->is_lite = is_lite;
-   this->block_size = BPTR_BLOCK_BYTE;
-   this->free_list.head = this->free_list.size = this->root_pointer = 0;
-   this->node_size = node_size;
+   self->version = BPTR_CURRENT_VERSION;
+   self->is_lite = is_lite;
+   self->block_size = BPTR_BLOCK_BYTE;
+   self->free_list.head = self->free_list.size = self->root_pointer = 0;
+   self->node_size = node_size;
    /* t >= (rem_sz / kv_sz + 1) / 2 */
-   this->key_type = key_type;
-   _bptr_boundry_set(this->node_boundry.internal, BPTR_PTR_SIZE);
-   _bptr_boundry_set(this->node_boundry.leaf, value_size);
-   this->value_size = value_size;
-   this->record_count = 0;
-   this->node_count = 0;
-   this->tree_height = 0;
+   self->key_size = key_size;
+   _bptr_boundry_set(self->node_boundry.internal, BPTR_PTR_SIZE);
+   _bptr_boundry_set(self->node_boundry.leaf, value_size);
+   self->value_size = value_size;
+   self->record_count = 0;
+   self->node_count = 0;
+   self->tree_height = 0;
 
    /* Construct the file */
-   if (bptr_fcreat(this, filename)) 
+   if (bptr_fcreat(self, filename)) 
       goto FOPEN_ERR;
 
-   return this;
+   return self;
 
 /* Error Handle */
 FOPEN_ERR:
 INVALID_T_VAL_ERR:
-   free(this);
+   free(self);
    return NULL;
 }
 
 
 struct bptree *bptr_load(const char *filename)
 {
-   struct bptree *this;
+   struct bptree *self;
    int fn_ret;
 
    /* malloc for the handler */
-   this = malloc(sizeof (struct bptree));
-   if (this == NULL) return NULL;
+   self = malloc(sizeof (struct bptree));
+   if (self == NULL) return NULL;
 
-   fn_ret = bptr_fload(this, filename);
+   fn_ret = bptr_fload(self, filename);
    if (fn_ret)
     {
       bptr_errno = 1;
       goto FLOAD_ERR;
     }
-   _bptr_boundry_set(this->node_boundry.internal, BPTR_PTR_SIZE);
-   _bptr_boundry_set(this->node_boundry.leaf, this->value_size);
+   _bptr_boundry_set(self->node_boundry.internal, BPTR_PTR_SIZE);
+   _bptr_boundry_set(self->node_boundry.leaf, self->value_size);
 
-   return this;
+   return self;
 
 INVALID_T_VAL_ERR:
-   bptr_fclose(this);
+   bptr_fclose(self);
 FLOAD_ERR:
-   free(this);
+   free(self);
    return NULL;
 }
 
-int bptr_destroy(struct bptree *this)
+int bptr_destroy(struct bptree *self)
 {
    int err_code = 0;
 
-   if (bptr_fclose(this))
+   if (bptr_fclose(self))
       err_code = 1;
-   free(this);
+   free(self);
 
    return err_code;
 }
 
 
-int bptr_insert(struct bptree *this, const void *kv)
+int bptr_insert(struct bptree *self, const void *kv)
 {
-   if (this->root_pointer == 0)
+   if (self->root_pointer == 0)
       ;
 
    //TODO

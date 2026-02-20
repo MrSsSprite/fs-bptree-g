@@ -13,16 +13,6 @@
 struct bptree;
 /*---------------------- Public Struct Declaration END -----------------------*/
 
-/*------------------------------- Public Enums -------------------------------*/
-enum bptr_key_type
-{
-   BPTR_KYTP_U8 = 1, BPTR_KYTP_I8,
-   BPTR_KYTP_U16, BPTR_KYTP_I16,
-   BPTR_KYTP_U32, BPTR_KYTP_I32,
-   BPTR_KYTP_U64, BPTR_KYTP_I64,
-};
-/*----------------------------- Public Enums END -----------------------------*/
-
 /*----------------------- Public Variable Declaration ------------------------*/
 extern int bptr_errno;
 /*--------------------- Public Variable Declaration END ----------------------*/
@@ -30,18 +20,18 @@ extern int bptr_errno;
 struct bptree *bptr_init
 (
    const char *filename,
-   int is_lite,
+   _Bool is_lite,
    uint32_t node_size,
-   uint8_t key_type,
+   uint16_t key_size,
    uint16_t value_size
 );
 struct bptree *bptr_load(const char *filename);
-int bptr_insert(struct bptree *this, const void *kv);
-int bptr_erase(struct bptree *this, const void *key);
-const void *bptr_find(struct bptree *this, const void *key);
-int bptr_find_range(struct bptree *this, const void *bg, const void *ed,
+int bptr_insert(struct bptree *self, const void *kv);
+int bptr_erase(struct bptree *self, const void *key);
+const void *bptr_find(struct bptree *self, const void *key);
+int bptr_find_range(struct bptree *self, const void *bg, const void *ed,
                     void **res_it);
-int bptr_destroy(struct bptree *this);
+int bptr_destroy(struct bptree *self);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif
