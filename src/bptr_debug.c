@@ -12,7 +12,7 @@ static const char *_bptr_key_type_to_string(uint_fast8_t key_type);
 
 
 /*----------------------------- Public Functions -----------------------------*/
-int bptr_dump_handler(const struct bptree *this, FILE *stream)
+int bptr_dump_handler(const struct bptr *this, FILE *stream)
 {
    if (this == NULL || stream == NULL)
       return -1;
@@ -37,16 +37,16 @@ int bptr_dump_handler(const struct bptree *this, FILE *stream)
 
    /* Tree Structure */
    fprintf(stream, "Tree Structure:\n");
-   fprintf(stream, "  root_pointer:        %" PRIuFAST64 "\n", this->root_pointer);
+   fprintf(stream, "  root_pointer:        %" PRIuFAST64 "\n", this->root_idx);
    fprintf(stream, "  node_size:           %" PRIuFAST32 " bytes\n", this->node_size);
    fprintf(stream, "  node_boundry.leaf:\n");
    fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_boundry.leaf.low);
    fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_boundry.leaf.up);
    fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_boundry.leaf.t_value);
    fprintf(stream, "  node_boundry.internal:\n");
-   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_boundry.internal.low);
-   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_boundry.internal.up);
-   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_boundry.internal.t_value);
+   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_boundry.brch.low);
+   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_boundry.brch.up);
+   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_boundry.brch.t_value);
    fprintf(stream, "\n");
 
    /* Data Type Information */
@@ -65,9 +65,9 @@ int bptr_dump_handler(const struct bptree *this, FILE *stream)
 
    /* Statistics */
    fprintf(stream, "Statistics:\n");
-   fprintf(stream, "  record_count:        %" PRIuFAST64 "\n", this->record_count);
-   fprintf(stream, "  node_count:          %" PRIuFAST64 "\n", this->node_count);
-   fprintf(stream, "  tree_height:         %" PRIuFAST32 "\n", this->tree_height);
+   fprintf(stream, "  record_count:        %" PRIuFAST64 "\n", this->record_cnt);
+   fprintf(stream, "  node_count:          %" PRIuFAST64 "\n", this->node_cnt);
+   fprintf(stream, "  tree_height:         %" PRIuFAST32 "\n", this->height);
    fprintf(stream, "\n");
 
    fprintf(stream, "==========================================\n");

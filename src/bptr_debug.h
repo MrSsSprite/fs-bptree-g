@@ -22,7 +22,7 @@
  * - Memory management (free_list head and size)
  * - Statistics (record_count, node_count, tree_height)
  */
-int bptr_dump_handler(const struct bptree *this, FILE *stream);
+int bptr_dump_handler(const struct bptr *this, FILE *stream);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif

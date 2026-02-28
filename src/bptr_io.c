@@ -2,6 +2,7 @@
 #include "bptr_io.h"
 #include "../bptree.h"
 #include "bptr_internal.h"
+#include "bptr_node.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -17,7 +18,7 @@
    memit += (uptr_size); \
    *(uptr_type*)memit = this->free_list.size; \
    memit += (uptr_size); \
-   *(uptr_type*)memit = this->node_count; \
+   *(uptr_type*)memit = this->node_cnt; \
    memit += (uptr_size); \
 } while (0)
 
@@ -26,13 +27,13 @@
    this->root_pointer = *(uptr_type*)memit; memit += (uptr_size); \
    this->free_list.head = *(uptr_type*)memit; memit += (uptr_size); \
    this->free_list.size = *(uptr_type*)memit; memit += (uptr_size); \
-   this->node_count = *(uptr_type*)memit; memit += (uptr_size); \
+   this->node_cnt = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
 
 /*----------------------------- Public Functions -----------------------------*/
-int bptr_fcreat(struct bptree *this, const char *filename)
+int bptr_io_fcreat(struct bptr *this, const char *filename)
 {
    int err_code;
    void *memit;
@@ -70,9 +71,9 @@ int bptr_fcreat(struct bptree *this, const char *filename)
    *(uint16_t*)memit = this->value_size;
    memit += 3; // +1 for padding
 
-   *(uint64_t*)memit = this->record_count;
+   *(uint64_t*)memit = this->record_cnt;
    memit += 8;
-   *(uint32_t*)memit = this->tree_height;
+   *(uint32_t*)memit = this->height;
    memit += 4;
    if (this->is_lite)
       _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
@@ -104,7 +105,7 @@ FOPEN_ERR:
 }
 
 
-int bptr_fload(struct bptree *this, const char *filename)
+int bptr_io_fload(struct bptr *this, const char *filename)
 {
    uint32_t mvb_buf[3];
    int err_code;
@@ -167,9 +168,9 @@ int bptr_fload(struct bptree *this, const char *filename)
    memit += 1;
    this->value_size = *(uint16_t*)memit;
    memit += 3; // +1 for padding
-   this->record_count = *(uint64_t*)memit;
+   this->record_cnt = *(uint64_t*)memit;
    memit += 8;
-   this->tree_height = *(uint32_t*)memit;
+   this->height = *(uint32_t*)memit;
    memit += 4;
    if (this->is_lite)
       _bptr_fload_read_uptr_metadata(BPTR_LITE_PTR_TYPE, BPTR_LITE_PTR_BYTE);
@@ -188,7 +189,7 @@ FOPEN_ERR:
    return err_code;
 }
 
-int bptr_fclose(struct bptree *this)
+int bptr_io_fclose(struct bptr *this)
 {
    int err_code = 0;
 
@@ -200,57 +201,73 @@ int bptr_fclose(struct bptree *this)
 }
 
 
-int bptr_fread_node(struct bptree *this, bptr_node_t node_idx)
+// Undefined if node_idx is 0
+int bptr_io_fread_node(struct bptr *this, bptr_node_t node_idx)
 {
    long offset = node_idx * this->node_size;
 
    
    if (fseek(this->file, offset, SEEK_SET))
-      return 1;
+      return 2;
 
    if (fread(this->fbuf, this->node_size, 1, this->file) != 1)
-      return 2;
+      return 3;
 
    return 0;
 }
 
 
-bptr_node_t bptr_flush_node(struct bptree *this, bptr_node_t node_idx)
+bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 {
    long pos;
 
-   if (node_idx == 0)
+   
+   if (node_idx == 0)   // new node
     {
-      if (fseek(this->file, 0, SEEK_END))
+      if (self->free_list.size)
        {
-         bptr_errno = 1;
-         return 0;
+         if (bptr_io_fread_node(self, self->free_list.head))
+          { bptr_errno = 1; return 0; }
+         if (*(uint16_t*)self->fbuf & BPTR_NODE_FLAG_VALID)
+          { bptr_errno = -1; return 0; }
+         pos = self->free_list.head * self->node_size;
+#define _FETCH_NEXT_FREE_NODE(T) do \
+ { self->free_list.head = *(T*)((uint16_t*)self->fbuf + 1); } \
+while (0)
+         if (self->is_lite)   _FETCH_NEXT_FREE_NODE(BPTR_LITE_PTR_TYPE);
+         else                 _FETCH_NEXT_FREE_NODE(BPTR_NORM_PTR_TYPE);
+#undef _FETCH_NEXT_FREE_NODE
+         self->free_list.size--;
+         if (fseek(self->file, pos, SEEK_SET))
+          { bptr_errno = 1; return 0; }
+       }
+      else
+       {
+         if (fseek(self->file, 0, SEEK_END))
+          { bptr_errno = 1; return 0; }
        }
     }
-   else
+   else                 // update node
     {
-      if (fseek(this->file, node_idx * this->node_size, SEEK_SET))
-       {
-         bptr_errno = 1;
-         return 0;
-       }
+      if (fseek(self->file, node_idx * self->node_size, SEEK_SET))
+       { bptr_errno = 1; return 0; }
     }
 
    // calculate the location of node in block size
-   pos = ftell(this->file);
+   pos = ftell(self->file);
    if (pos == -1L)
     {
       bptr_errno = 2;
       return 0;
     }
-   pos /= this->block_size;
+   pos /= self->block_size;
 
-   if (fwrite(this->fbuf, this->node_size, 1, this->file) != 1)
+   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
     {
       bptr_errno = 3;
       return 0;
     }
-   if (fflush(this->file))
+   if (fflush(self->file))
     {
       bptr_errno = 4;
       return 0;

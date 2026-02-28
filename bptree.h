@@ -10,7 +10,7 @@
 /*---------------------------- Public Define END -----------------------------*/
 
 /*------------------------ Public Struct Declaration -------------------------*/
-struct bptree;
+struct bptr;
 /*---------------------- Public Struct Declaration END -----------------------*/
 
 /*------------------------------- Public Enums -------------------------------*/
@@ -27,21 +27,22 @@ enum bptr_key_type
 extern int bptr_errno;
 /*--------------------- Public Variable Declaration END ----------------------*/
 /*----------------------------- Public Functions -----------------------------*/
-struct bptree *bptr_init
+struct bptr *bptr_init
 (
    const char *filename,
    int is_lite,
    uint32_t node_size,
    uint8_t key_type,
-   uint16_t value_size
+   uint16_t value_size,
+   int (*compare)(const void *lhs, const void *rhs)
 );
-struct bptree *bptr_load(const char *filename);
-int bptr_insert(struct bptree *this, const void *kv);
-int bptr_erase(struct bptree *this, const void *key);
-const void *bptr_find(struct bptree *this, const void *key);
-int bptr_find_range(struct bptree *this, const void *bg, const void *ed,
+struct bptr *bptr_load(const char *filename);
+int bptr_insert(struct bptr *self, const void *key, const void *value);
+int bptr_erase(struct bptr *this, const void *key);
+const void *bptr_find(struct bptr *this, const void *key);
+int bptr_find_range(struct bptr *this, const void *bg, const void *ed,
                     void **res_it);
-int bptr_destroy(struct bptree *this);
+int bptr_destroy(struct bptr *this);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif

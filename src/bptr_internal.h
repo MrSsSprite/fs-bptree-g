@@ -25,11 +25,11 @@ typedef uint_fast64_t bptr_node_t;
 /*--------------------------- Public Typedefs END ----------------------------*/
 
 /*------------------------------ Public Macros -------------------------------*/
-#define BPTR_PTR_SIZE (this->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE)
+#define BPTR_PTR_SIZE (self->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE)
 /*---------------------------- Public Macros END -----------------------------*/
 
 /*----------------------------- Public Structs ------------------------------*/
-struct bptree
+struct bptr
 {
    /* File IO */
    FILE *file;
@@ -41,17 +41,14 @@ struct bptree
    uint_fast32_t block_size;
    
    /* 木構造 */
-   uint_fast64_t root_pointer;
+   bptr_node_t root_idx;
    uint_fast32_t node_size;
    /* boundry value that just EXCEED the max/min */
    struct
     {
       struct _bptr_node_boundry
-       {
-         uint_fast16_t low, up;
-         uint_fast16_t t_value;
-       }
-      leaf, internal;
+       { uint_fast32_t low, up, t_value; }
+      leaf, brch;
     }
    node_boundry;
 
@@ -67,9 +64,11 @@ struct bptree
    free_list;
 
    /* 統計情報 */
-   uint_fast64_t record_count;
-   uint_fast64_t node_count;
-   uint_fast32_t tree_height;
+   uint_fast64_t record_cnt;
+   uint_fast64_t node_cnt;
+   uint_fast32_t height;
+
+   int (*compare)(const void *lhs, const void *rhs);
 };
 /*---------------------------- Public Structs END ----------------------------*/
 
@@ -77,6 +76,7 @@ struct bptree
 /*---------------------- Public Function Prototypes END ----------------------*/
 
 /*------------------------ Public Function Definition ------------------------*/
+// Calculate key size in bytes
 static inline uint_fast16_t _bptr_key_size(uint8_t key_type)
 {
    switch (key_type)
