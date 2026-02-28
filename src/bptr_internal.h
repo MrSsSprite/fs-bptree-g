@@ -47,13 +47,13 @@ struct bptr
    struct
     {
       struct _bptr_node_boundry
-       { uint_fast32_t low, up, t_value; }
+       { uint_fast16_t low, up; }
       leaf, brch;
     }
    node_boundry;
 
    /* データ型 */
-   uint_fast8_t key_type;
+   uint_fast16_t key_size;
    uint_fast16_t value_size;
 
    /* メモリ管理 */
@@ -74,29 +74,5 @@ struct bptr
 
 /*------------------------ Public Function Prototypes ------------------------*/
 /*---------------------- Public Function Prototypes END ----------------------*/
-
-/*------------------------ Public Function Definition ------------------------*/
-// Calculate key size in bytes
-static inline uint_fast16_t _bptr_key_size(uint8_t key_type)
-{
-   switch (key_type)
-    {
-   case BPTR_KYTP_I8:
-   case BPTR_KYTP_U8:
-      return 1;
-   case BPTR_KYTP_I16:
-   case BPTR_KYTP_U16:
-      return 2;
-   case BPTR_KYTP_I32:
-   case BPTR_KYTP_U32:
-      return 4;
-   case BPTR_KYTP_I64:
-   case BPTR_KYTP_U64:
-      return 8;
-    }
-
-   return 0;
-}
-/*---------------------- Public Function Definition END ----------------------*/
 
 #endif

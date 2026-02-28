@@ -3,6 +3,7 @@
 #include "bptr_internal.h"
 #include "bptr_io.h"
 #include "bptr_node.h"
+#include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
 /*--------------------------- Private Includes END ---------------------------*/
@@ -19,15 +20,22 @@ struct node_idx_pair
 
 
 /*------------------------------ Private Macros ------------------------------*/
-#define _bptr_boundry_set(ref_exp, value_sz) do \
+#define _bptr_boundry_set(self) do \
 {  /* t >= (rem_sz / kv_sz + 1) / 2 */ \
-   (ref_exp).t_value = \
-      (  (self->node_size - BPTR_NODE_METADATA_BYTE - (value_sz)) / \
-         (_bptr_key_size(self->key_type) + (value_sz)) + 1 \
-      ) / 2; \
-   if ((ref_exp).t_value <= 2) goto INVALID_T_VAL_ERR; \
-   (ref_exp).low = (ref_exp).t_value - 2; \
-   (ref_exp).up = 2 * (ref_exp).t_value; \
+   uint_fast32_t rem_sz = (self)->node_size - BPTR_NODE_METADATA_BYTE; \
+   (self)->node_boundry.brch.up = \
+   (rem_sz - BPTR_PTR_SIZE) / ((self)->key_size + BPTR_PTR_SIZE) + 1; \
+   if ((self)->node_boundry.brch.up < 3) \
+    { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
+   (self)->node_boundry.brch.low = CEIL_DIV((self)->node_boundry.brch.up, 2) - 2; \
+   /* should be B/(K + V) + 1; +1 is detained so that B/(K+V) can be used for \
+    * temporary storage. \
+    */ \
+   (self)->node_boundry.leaf.up = rem_sz / ((self)->key_size + (self)->value_size); \
+   if ((self)->node_boundry.leaf.up < 1) \
+    { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
+   (self)->node_boundry.leaf.low = CEIL_DIV((self)->node_boundry.leaf.up, 2) - 1; \
+   (self)->node_boundry.leaf.up += 1; \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
@@ -47,18 +55,18 @@ int bptr_errno;
 struct bptr *bptr_init
 (
    const char *filename,
-   int is_lite,
+   _Bool is_lite,
    uint32_t node_size,
-   uint8_t key_type,
+   uint16_t key_size,
    uint16_t value_size,
    int (*compare)(const void *lhs, const void *rhs)
-)
+   )
 {
    struct bptr *self;
 
    /* Node must be large enough to at least contain
     * the metadata, 1 key and 2 childs */
-   if (node_size < BPTR_NODE_METADATA_BYTE + _bptr_key_size(key_type) +
+   if (node_size < BPTR_NODE_METADATA_BYTE + key_size +
                    (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2)
       return NULL;
 
@@ -72,31 +80,12 @@ struct bptr *bptr_init
    self->block_size = BPTR_BLOCK_BYTE;
    self->free_list.head = self->free_list.size = self->root_idx = 0;
    self->node_size = node_size;
-   self->key_type = key_type;
-   {
-      uint_fast32_t rem_sz = self->node_size - BPTR_NODE_METADATA_BYTE;
-      uint_fast16_t key_sz = _bptr_key_size(self->key_type);
-      /* 2t - 1 == capacity == rem_sz / kv_sz
-       * t >= (rem_sz / kv_sz + 1) / 2
-       * shouldn't calculate `up` first and then divide it by 2 as this approach
-       * could cause truncation (integer division)
-       */
-      self->node_boundry.brch.t_value =
-         ((rem_sz - BPTR_PTR_SIZE) / (key_sz + BPTR_PTR_SIZE) + 1) / 2;
-      if (self->node_boundry.brch.t_value <= 2) goto INVALID_T_VAL_ERR;
-      self->node_boundry.brch.low = self->node_boundry.brch.t_value - 2;
-      self->node_boundry.brch.up = 2 * self->node_boundry.brch.t_value;
-      //TODO: fix leaf boundry calculation. # of keys and # of vals should be equal
-      self->node_boundry.leaf.t_value =
-         (rem_sz / (key_sz + self->value_size) + 1) / 2;
-      // ...
-      _bptr_boundry_set(self->node_boundry.leaf, value_size);
-   }
+   self->key_size = key_size;
    self->value_size = value_size;
+   _bptr_boundry_set(self);
    self->record_cnt = 0;
    self->node_cnt = 0;
    self->height = 0;
-   self->compare = compare;
 
    /* Construct the file */
    if (bptr_io_fcreat(self, filename)) 
@@ -106,7 +95,7 @@ struct bptr *bptr_init
 
 /* Error Handle */
 FOPEN_ERR:
-INVALID_T_VAL_ERR:
+INVALID_FANOUT_ERR:
    free(self);
    return NULL;
 }
@@ -127,12 +116,11 @@ struct bptr *bptr_load(const char *filename)
       bptr_errno = 1;
       goto FLOAD_ERR;
     }
-   _bptr_boundry_set(self->node_boundry.brch, BPTR_PTR_SIZE);
-   _bptr_boundry_set(self->node_boundry.leaf, self->value_size);
+   _bptr_boundry_set(self);
 
    return self;
 
-INVALID_T_VAL_ERR:
+INVALID_FANOUT_ERR:
    bptr_io_fclose(self);
 FLOAD_ERR:
    free(self);
@@ -185,7 +173,6 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
 {
    struct bptr_node *node;
    bptr_node_ki_t lo, md, up;
-   uint_fast16_t key_size = _bptr_key_size(self->key_type);
    int cmp_res;
 
    bptr_errno = 0;
@@ -201,7 +188,7 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
       for (lo = 0, up = node->key_count, md = up / 2;
            lo < up; md = lo + (up - lo) / 2)
        {
-         cmp_res = self->compare(key, (char*)node->keys + md * key_size);
+         cmp_res = self->compare(key, (char*)node->keys + md * self->key_size);
          if (cmp_res < 0)        up = md;
          else if (cmp_res > 0)   lo = md + 1;
          else                    break;
