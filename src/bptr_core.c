@@ -24,7 +24,7 @@ struct node_idx_pair
 {  /* t >= (rem_sz / kv_sz + 1) / 2 */ \
    uint_fast32_t rem_sz = (self)->node_size - BPTR_NODE_METADATA_BYTE; \
    (self)->node_boundry.brch.up = \
-   (rem_sz - BPTR_PTR_SIZE) / ((self)->key_size + BPTR_PTR_SIZE) + 1; \
+      (rem_sz - BPTR_PTR_SIZE) / ((self)->key_size + BPTR_PTR_SIZE) + 1; \
    if ((self)->node_boundry.brch.up < 3) \
     { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
    (self)->node_boundry.brch.low = CEIL_DIV((self)->node_boundry.brch.up, 2) - 2; \
