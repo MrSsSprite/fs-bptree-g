@@ -35,14 +35,22 @@
    (iter) = _tmp_ptr; \
 } while (0)
 
-//TODO: fix leaf kv size calculation. # of keys and # of vals should be equal
 #define _node_kv_malloc(self, node) do \
 { \
-   uint_fast32_t up_bound = _node_is_leaf(self, node) ? \
-                            self->node_boundry.leaf.up : \
-                            self->node_boundry.brch.up; \
-   (node)->keys = malloc(_bptr_key_size((self)->key_type) * ((up_bound) - 1)); \
-   (node)->vals = malloc(_node_val_arr_size(self, node)); \
+   if ((node)->is_leaf) \
+    { \
+      (node)->keys = \
+         malloc(((self)->node_boundry.leaf.up - 1) * (self)->key_size); \
+      (node)->vals = \
+         malloc(((self)->node_boundry.leaf.up - 1) * (self)->value_size); \
+    } \
+   else \
+    { \
+      (node)->keys = \
+         malloc(((self)->node_boundry.brch.up - 1) * (self)->key_size); \
+      (node)->vals = \
+         malloc((self)->node_boundry.brch.up * BPTR_PTR_SIZE); \
+    } \
 } while (0)
 
 #define _node_val_size(self, node) \
