@@ -84,10 +84,8 @@ struct bptr_node *bptr_node_new
 
    node = malloc(sizeof(struct bptr_node));
    if (node == NULL)
-    {
-      bptr_errno = 1;
-      goto NODE_MALLOC_ERR;
-    }
+    { bptr_errno = 1; goto NODE_MALLOC_ERR; }
+
    flags = BPTR_NODE_FLAG_VALID;
    if (is_leaf)
     {
