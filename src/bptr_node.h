@@ -11,7 +11,6 @@
 /*------------------------------ Public Defines ------------------------------*/
 #define BPTR_NODE_FLAG_VALID     (0x0001u)      // 0：削除済み／空き、1：有効
 #define BPTR_NODE_FLAG_LEAF      (0x0002u)      // 0：内部ノード、1：リーフノード
-#define BPTR_NODE_FLAG_DIRTY     (0x0004u)      // 変更あり（書き戻し必要）
 /*---------------------------- Public Defines END ----------------------------*/
 
 
