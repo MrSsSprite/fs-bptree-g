@@ -225,7 +225,7 @@ bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
    
    if (node_idx == 0)   // new node
     {
-       if (self->free_list.size)
+      if (self->free_list.size)
        {
          if (bptr_io_fread_node(self, self->free_list.head))
           { bptr_errno = 1; return 0; }
