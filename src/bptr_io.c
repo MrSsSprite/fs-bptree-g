@@ -164,7 +164,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
    memit = self->fbuf + 12;
    self->node_size = *(uint32_t*)memit;
    memit += 4;
-   self->key_type = *(uint8_t*)memit;
+   self->key_size = *(uint16_t*)memit;
    memit += 1;
    self->value_size = *(uint16_t*)memit;
    memit += 3; // +1 for padding

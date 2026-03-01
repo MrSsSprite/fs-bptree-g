@@ -215,7 +215,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
    
    buf_write(buf_it, node->keys,
-             _bptr_key_size(self->key_type) * node->key_count);
+             self->key_size * node->key_count);
    buf_write(buf_it, node->vals, _node_val_arr_size(self, node));
 }
 
@@ -250,7 +250,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
       return 1;
     }
    buf_read(buf_it, node->keys,
-            _bptr_key_size(self->key_type) * node->key_count);
+            self->key_size * node->key_count);
    buf_read(buf_it, node->vals, _node_val_arr_size(self, node));
 
    return 0;
