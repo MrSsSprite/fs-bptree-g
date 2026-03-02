@@ -192,7 +192,7 @@ int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 
 
 /*---------------------------- Private Functions -----------------------------*/
-// Write to fbuf
+// Write node to fbuf
 static inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 {
