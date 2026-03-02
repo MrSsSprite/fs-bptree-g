@@ -54,14 +54,14 @@
 } while (0)
 
 #define _node_val_size(self, node) \
-   (_node_is_leaf(self, node) ? self->value_size : \
-                                (self->is_lite ? BPTR_LITE_PTR_BYTE : \
-                                                 BPTR_NORM_PTR_BYTE))
+   ((node)->is_leaf ? (self)->value_size : \
+                      ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
+                                         BPTR_NORM_PTR_BYTE))
 #define _node_val_arr_size(self, node) \
-   (_node_is_leaf((self), (node)) ? \
+   ((node)->is_leaf ? \
       (self)->value_size * (node)->key_count : \
-      ((self)->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE * \
-         ((node)->key_count + 1)))
+      ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
+                         BPTR_NORM_PTR_BYTE * ((node)->key_count + 1)))
 /*---------------------------- Private Macro END -----------------------------*/
 
 
@@ -239,7 +239,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 #undef _READ_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
    
-   node->is_leaf = _node_is_leaf(self, node);
+   node->is_leaf = (self->height == node->level);
    node->is_dirty = 0;
    _node_kv_malloc(self, node);
    if (node->keys == NULL || node->vals == NULL)

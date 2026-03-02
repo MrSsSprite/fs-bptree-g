@@ -15,7 +15,6 @@
 
 
 /*------------------------------ Public Macros -------------------------------*/
-#define _node_is_leaf(self, node) (self->height == node->level)
 #define _node_brch_vals_get(self, node, idx) \
    ((self)->is_lite ? *((BPTR_LITE_PTR_TYPE*)(node)->vals + (idx)) : \
                       *((BPTR_NORM_PTR_TYPE*)(node)->vals + (idx)))
