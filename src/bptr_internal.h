@@ -57,10 +57,8 @@ struct bptr
    uint_fast16_t value_size;
 
    /* メモリ管理 */
-   struct
-    {
-      uint_fast64_t head, size;
-    }
+   struct _bptr_free_list
+    { uint_fast64_t head, size; }
    free_list;
 
    /* 統計情報 */
