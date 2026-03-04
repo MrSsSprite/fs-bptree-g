@@ -195,7 +195,7 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
        }
 
       // early return
-      if (_node_is_leaf(self, node))
+      if (node->is_leaf)
        {
          if (cmp_res == 0) return (struct node_idx_pair){ 1, node, md };
          else { bptr_errno = 0; return (struct node_idx_pair){ 0, node, up }; }
