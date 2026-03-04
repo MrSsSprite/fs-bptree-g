@@ -58,7 +58,7 @@ struct bptr
 
    /* メモリ管理 */
    struct _bptr_free_list
-    { uint_fast64_t head, size; }
+    { bptr_node_t head, cnt; }
    free_list;
 
    /* 統計情報 */

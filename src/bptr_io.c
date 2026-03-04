@@ -16,7 +16,7 @@
    memit += (uptr_size); \
    *(uptr_type*)memit = self->free_list.head; \
    memit += (uptr_size); \
-   *(uptr_type*)memit = self->free_list.size; \
+   *(uptr_type*)memit = self->free_list.cnt; \
    memit += (uptr_size); \
    *(uptr_type*)memit = self->node_cnt; \
    memit += (uptr_size); \
@@ -26,7 +26,7 @@
 { \
    self->root_idx = *(uptr_type*)memit; memit += (uptr_size); \
    self->free_list.head = *(uptr_type*)memit; memit += (uptr_size); \
-   self->free_list.size = *(uptr_type*)memit; memit += (uptr_size); \
+   self->free_list.cnt = *(uptr_type*)memit; memit += (uptr_size); \
    self->node_cnt = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
@@ -225,7 +225,7 @@ bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
    
    if (node_idx == 0)   // new node
     {
-      if (self->free_list.size)
+      if (self->free_list.cnt)
        {
          if (bptr_io_fread_node(self, self->free_list.head))
           { bptr_errno = 1; return 0; }
@@ -238,7 +238,7 @@ while (0)
          if (self->is_lite)   _FETCH_NEXT_FREE_NODE(BPTR_LITE_PTR_TYPE);
          else                 _FETCH_NEXT_FREE_NODE(BPTR_NORM_PTR_TYPE);
 #undef _FETCH_NEXT_FREE_NODE
-         self->free_list.size--;
+         self->free_list.cnt--;
          if (fseek(self->file, pos, SEEK_SET))
           { bptr_errno = 1; return 0; }
        }
