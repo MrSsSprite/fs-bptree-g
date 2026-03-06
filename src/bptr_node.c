@@ -8,31 +8,42 @@
 
 
 /*------------------------------ Private Macro -------------------------------*/
-#define buf_write(iter, src, size) do \
+#define iter_write(iter, src, size) do \
 { \
    memcpy((iter), (src), (size)); \
    (iter) = (char*)(iter) + (size); \
 } while (0)
 
-#define buf_tc_write(iter, val, type) do \
+#define buf_tc_write(buf, val, type) do \
 { \
-   type *_tmp_ptr = (iter); \
-   *_tmp_ptr++ = (type)(val); \
-   (iter) = _tmp_ptr; \
+   type _val_tc = (val); \
+   memcpy((buf), &_val_tc, sizeof(_val_tc)); \
+} while (0)
+
+#define iter_tc_write(iter, val, type) do \
+{ \
+   buf_tc_write((iter), (val), type); \
+   (iter) = (char*)(iter) + sizeof(type); \
 } while (0)
 
 
-#define buf_read(iter, dst, size) do \
+#define iter_read(iter, dst, size) do \
 { \
    memcpy((dst), (iter), (size)); \
    (iter) = (char*)(iter) + (size); \
 } while (0)
 
-#define buf_tc_read(iter, dst, type) do \
+#define buf_tc_read(buf, dst, type) do \
 { \
-   type *_tmp_ptr = (iter); \
-   (dst) = *_tmp_ptr++; \
-   (iter) = _tmp_ptr; \
+   type val; \
+   memcpy(&val, (buf), sizeof(val)); \
+   (dst) = val; \
+} while (0)
+
+#define iter_tc_read(iter, dst, type) do \
+{ \
+   buf_tc_read((iter), (dst), type); \
+   (iter) += sizeof(type); \
 } while (0)
 
 #define _node_kv_malloc(self, node) do \
@@ -198,23 +209,23 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
 
-   buf_write(buf_it, &node->flags, 2);
-   buf_write(buf_it, &node->level, 2);
-   buf_write(buf_it, &node->key_count, 4);
-   buf_write(buf_it, &node->checksum, 4);
+   iter_write(buf_it, &node->flags, 2);
+   iter_write(buf_it, &node->level, 2);
+   iter_write(buf_it, &node->key_count, 4);
+   iter_write(buf_it, &node->checksum, 4);
 #define _WRITE_FIELDS(type) do { \
-      buf_tc_write(buf_it, node->parent, type); \
-      buf_tc_write(buf_it, node->next, type); \
-      buf_tc_write(buf_it, node->prev, type); \
+      iter_tc_write(buf_it, node->parent, type); \
+      iter_tc_write(buf_it, node->next, type); \
+      iter_tc_write(buf_it, node->prev, type); \
 } while (0)
    if (self->is_lite)   _WRITE_FIELDS(BPTR_LITE_PTR_TYPE);
    else                 _WRITE_FIELDS(BPTR_NORM_PTR_TYPE);
 #undef _WRITE_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
    
-   buf_write(buf_it, node->keys,
+   iter_write(buf_it, node->keys,
              self->key_size * node->key_count);
-   buf_write(buf_it, node->vals, _node_val_arr_size(self, node));
+   iter_write(buf_it, node->vals, _node_val_arr_size(self, node));
 }
 
 
@@ -225,14 +236,14 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
 
-   buf_read(buf_it, &node->flags, 2);
-   buf_read(buf_it, &node->level, 2);
-   buf_read(buf_it, &node->key_count, 4);
-   buf_read(buf_it, &node->checksum, 4);
+   iter_read(buf_it, &node->flags, 2);
+   iter_read(buf_it, &node->level, 2);
+   iter_read(buf_it, &node->key_count, 4);
+   iter_read(buf_it, &node->checksum, 4);
 #define _READ_FIELDS(type) do { \
-      buf_tc_read(buf_it, node->parent, type); \
-      buf_tc_read(buf_it, node->next, type); \
-      buf_tc_read(buf_it, node->prev, type); \
+      iter_tc_read(buf_it, node->parent, type); \
+      iter_tc_read(buf_it, node->next, type); \
+      iter_tc_read(buf_it, node->prev, type); \
 } while (0)
    if (self->is_lite)   _READ_FIELDS(uint32_t);
    else                 _READ_FIELDS(uint64_t);
@@ -247,9 +258,9 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
       free(node->keys); free(node->vals);
       return 1;
     }
-   buf_read(buf_it, node->keys,
+   iter_read(buf_it, node->keys,
             self->key_size * node->key_count);
-   buf_read(buf_it, node->vals, _node_val_arr_size(self, node));
+   iter_read(buf_it, node->vals, _node_val_arr_size(self, node));
 
    return 0;
 }
