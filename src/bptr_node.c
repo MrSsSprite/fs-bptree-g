@@ -264,4 +264,44 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 
    return 0;
 }
+
+static
+bptr_node_t bptr_node_prealloc(struct bptr *self, struct bptr_node *node,
+                               const void *key, const void *value)
+{
+   bptr_node_t ret;
+
+   if (self->free_list.cnt)
+    {
+      ret = self->free_list.head;
+      if (bptr_io_fread_node(self, self->free_list.head))
+       { bptr_errno = -1; return 0; }
+      if (self->is_lite)
+         buf_tc_read((char*)self->fbuf + 2, self->free_list.head,
+                     BPTR_LITE_PTR_TYPE);
+      else
+         buf_tc_read((char*)self->fbuf + 2, self->free_list.head,
+                     BPTR_NORM_PTR_TYPE);
+      self->free_list.cnt--;
+    }
+   else
+    {
+      static const char dummy = 0;
+      bptr_off_t offset;
+
+      if (fseek64(self->file, 0, SEEK_END))
+       { bptr_errno = -1; return 0; }
+      offset = ftell64(self->file);
+      if (offset == -1)
+       { bptr_errno = -1; return 0; }
+      if (fseek64(self->file, self->node_size - 1, SEEK_CUR))
+       { bptr_errno = -1; return 0; }
+      if (fwrite(&dummy, 1, 1, self->file) != 1)
+       { bptr_errno = -1; return 0; }
+      if (fflush(self->file))
+       { bptr_errno = -1; return 0; }
+      ret = offset / self->node_size;
+    }
+   return ret;
+}
 /*-------------------------- Private Functions END ---------------------------*/
