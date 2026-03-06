@@ -218,6 +218,7 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 
 
 // node_idx == 0 means new node
+// returns node index (not file offset) on success; 0 on failure
 bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 {
    bptr_off_t pos;
