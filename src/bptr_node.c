@@ -81,6 +81,8 @@ static inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
 static inline
 int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
+static inline
+bptr_node_t bptr_node_prealloc (struct bptr *self);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -266,8 +268,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 }
 
 static
-bptr_node_t bptr_node_prealloc(struct bptr *self, struct bptr_node *node,
-                               const void *key, const void *value)
+bptr_node_t bptr_node_prealloc (struct bptr *self)
 {
    bptr_node_t ret;
 
