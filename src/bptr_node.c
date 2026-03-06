@@ -152,10 +152,13 @@ void bptr_node_free(struct bptr_node *node)
 }
 
 
-void bptr_node_unload(struct bptr_node *node)
+int bptr_node_unload(struct bptr *self, struct bptr_node *node)
 {
    //TODO: involve cache mechanism
+   if (node->is_dirty && bptr_node_flush(self, node) == 0)
+      return 2;
    bptr_node_free(node);
+   return 0;
 }
 
 
