@@ -46,7 +46,28 @@ void bptr_node_free(struct bptr_node *node);
  
 int bptr_node_erase(bptr_node_t node_idx);
 struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx);
+/**
+ * @brief   unload a bptr node
+ *
+ * Calling this function claims that a node is no longer needed, and the
+ * program can hence opt to free it at any time.
+ *
+ * @param   self  bptr obj.
+ * @param   node  the node to be unloaded
+ * @retval  0  success
+ * @retval  2  bptr_node_flush failure. bptr_node_flush sets bptr_errno
+ *
+ * @note    The node may still be cached depending on the implementation.
+ */
 int bptr_node_unload(struct bptr *self, struct bptr_node *node);
+/**
+ * @brief   flush a bptr node to file.
+ * @param   self  bptr obj.
+ * @param   node  the node to be flushed
+ * @return  same as if bptr_io_flush_node is called (bptr_io_flush_node sets
+ *          @c bptr_errno on failure).
+ * @see     bptr_io_flush_node
+ */
 bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node);
 /*--------------------------- Public Functions END ---------------------------*/
 
