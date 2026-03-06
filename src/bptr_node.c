@@ -198,7 +198,7 @@ NODE_MALLOC_ERR:
 }
 
 
-int bptr_node_flush(struct bptr *self, struct bptr_node *node)
+bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node)
 {
    bptr_node_marshal(self, node);
    return bptr_io_flush_node(self, node->node_idx);

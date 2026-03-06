@@ -47,7 +47,7 @@ void bptr_node_free(struct bptr_node *node);
 int bptr_node_erase(bptr_node_t node_idx);
 struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx);
 int bptr_node_unload(struct bptr *self, struct bptr_node *node);
-int bptr_node_flush(struct bptr *self, struct bptr_node *node);
+bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node);
 /*--------------------------- Public Functions END ---------------------------*/
 
 
