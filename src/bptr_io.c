@@ -204,10 +204,10 @@ int bptr_io_fclose(struct bptr *self)
 // Undefined if node_idx is 0
 int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 {
-   long offset = node_idx * self->node_size;
+   bptr_off_t offset = node_idx * self->node_size;
 
    
-   if (fseek(self->file, offset, SEEK_SET))
+   if (fseek64(self->file, offset, SEEK_SET))
       return 2;
 
    if (fread(self->fbuf, self->node_size, 1, self->file) != 1)
@@ -220,7 +220,7 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 // node_idx == 0 means new node
 bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 {
-   long pos;
+   bptr_off_t pos;
 
    
    if (node_idx == 0)   // new node
@@ -239,23 +239,23 @@ while (0)
          else                 _FETCH_NEXT_FREE_NODE(BPTR_NORM_PTR_TYPE);
 #undef _FETCH_NEXT_FREE_NODE
          self->free_list.cnt--;
-         if (fseek(self->file, pos, SEEK_SET))
+         if (fseek64(self->file, pos, SEEK_SET))
           { bptr_errno = 1; return 0; }
        }
       else
        {
-         if (fseek(self->file, 0, SEEK_END))
+         if (fseek64(self->file, 0, SEEK_END))
           { bptr_errno = 1; return 0; }
        }
     }
    else                 // update node
     {
-      if (fseek(self->file, node_idx * self->node_size, SEEK_SET))
+      if (fseek64(self->file, node_idx * self->node_size, SEEK_SET))
        { bptr_errno = 1; return 0; }
     }
 
    // calculate the location of node in block size
-   pos = ftell(self->file);
+   pos = ftell64(self->file);
    if (pos == -1L)
     {
       bptr_errno = 2;

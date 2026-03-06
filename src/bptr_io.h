@@ -5,6 +5,23 @@
 #include "bptr_internal.h"
 /*--------------------------- Public Includes END ----------------------------*/
 
+/*------------------------------ Public Macros -------------------------------*/
+#define _FILE_OFFSET_BITS 64  /* Ensures off_t is 64-bit on Linux/Unix */
+#include <stdio.h>
+#include <stdint.h>
+
+/* Simple cross-platform wrapper for 64-bit seeking */
+#ifdef _WIN32
+    #define fseek64 _fseeki64
+    #define ftell64 _ftelli64
+    typedef __int64 bptr_off_t;
+#else
+    #define fseek64 fseeko
+    #define ftell64 ftello
+    typedef off_t bptr_off_t;
+#endif
+/*---------------------------- Public Macros END -----------------------------*/
+
 /*----------------------------- Public Functions -----------------------------*/
 /**
  * @brief   create and initialize a new file for a new B+tree
