@@ -73,19 +73,6 @@
       (self)->value_size * (node)->key_count : \
       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
                          BPTR_NORM_PTR_BYTE * ((node)->key_count + 1)))
-
-#define __node_key_insert(self, node, key_ptr, idx) do \
-{ \
-   memcpy((char*)(node)->keys + (idx) * (self)->key_size, \
-          (key_ptr), (self)->key_size); \
-} while (0)
-
-#define __node_val_insert(self, node, val_ptr, idx) do \
-{ \
-   uint_fast16_t val_size = (node)->is_leaf ? (self)->value_size : \
-                                              BPTR_PTR_SIZE; \
-   memcpy((char*)(node)->vals + (idx) * val_size, (val_ptr), val_size); \
-}
 /*---------------------------- Private Macro END -----------------------------*/
 
 
@@ -360,6 +347,19 @@ static inline
 void _node_key_insert(struct bptr *self, struct bptr_node *node,
                       const void *key, uint_fast32_t idx)
 {
+   uint_fast32_t idx_plus1 = idx + 1,
+                 /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1 */
+                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
+                                       self->node_boundry.brch.up) - 1;
+   char *tar_p = (char*)node->keys + idx * self->key_size;
+
+   // insert idx is not last element
+   if (idx_plus1 != ed)
+      // reserve slot
+      memmove(tar_p + self->key_size, tar_p,
+              (node->key_count - idx) * self->key_size);
+   // copy into slot
+   memcpy(tar_p, key, self->key_size);
 }
 
 
@@ -368,5 +368,20 @@ static inline
 void _node_val_insert(struct bptr *self, struct bptr_node *node,
                       const void *val, uint_fast32_t idx)
 {
+   uint_fast32_t idx_plus1 = idx + 1,
+                 /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1
+                  * leaf: val_cnt == key_cnt; branch: val_cnt == key_cnt + 1 */
+                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
+                                       self->node_boundry.brch.up + 1) - 1;
+   uint_fast16_t val_sz = _node_val_size(self, node);
+   char *tar_p = (char*)node->vals + idx * val_sz;
+
+   // insert idx is not last element
+   if (idx_plus1 != ed)
+      // reserve slot
+      memmove(tar_p + val_sz, tar_p,
+              (node->key_count + (node->is_leaf ? 0 : 1) - idx) * val_sz);
+   // copy into slot
+   memcpy(tar_p, val, val_sz);
 }
 /*-------------------------- Private Functions END ---------------------------*/
