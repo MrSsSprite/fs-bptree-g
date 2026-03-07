@@ -153,18 +153,12 @@ struct bptr_node *bptr_node_new
    node->node_idx = 0;
    _node_kv_malloc(self, node);
    if (node->keys == NULL || node->vals == NULL)
-    {
-      bptr_errno = 1;
-      goto KV_MALLOC_ERR;
-    }
+    { bptr_errno = 1; goto KV_MALLOC_ERR; }
    if (parent)
     {
       struct bptr_node *parent_node = bptr_node_load(self, parent);
       if (parent_node == NULL)
-       {
-         bptr_errno = 2;
-         goto LOAD_PARENT_ERR;
-       }
+       { bptr_errno = 2; goto LOAD_PARENT_ERR; }
       node->level = parent_node->level + 1;
       bptr_node_unload(self, parent_node);
     }
