@@ -150,7 +150,8 @@ struct bptr_node *bptr_node_new
    node->is_dirty = 1;
    node->key_count = 0;
    node->parent = parent;
-   node->node_idx = 0;
+   node->node_idx = bptr_node_prealloc(self);
+   if (node->node_idx == 0) goto PREALLOC_ERR;
    _node_kv_malloc(self, node);
    if (node->keys == NULL || node->vals == NULL)
     { bptr_errno = 1; goto KV_MALLOC_ERR; }
@@ -172,6 +173,7 @@ LOAD_PARENT_ERR:
 KV_MALLOC_ERR:
    free(node->vals);
    free(node->keys);
+PREALLOC_ERR:
    free(node);
 NODE_MALLOC_ERR:
    return NULL;
