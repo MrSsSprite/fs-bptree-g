@@ -77,17 +77,56 @@
 
 
 /*---------------------- Private Function Declarations -----------------------*/
+// Write node to fbuf
+/**
+ * @brief   Marshal node data from struct to self->fbuf
+ *
+ * @param[in,out] self  bptr obj.
+ * @param[in]     node  node obj. to be serialized.
+ *
+ * @node    Serialization should be a more accurate name, but marshal is
+ *          adopted as it's shorter.
+ */
 static inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
+/**
+ * @brief   Serialize node data from self->fbuf to node struct.
+ *
+ * @param[in,out] self  bptr obj.
+ * @param[out]    node  node obj. to hold the deserialized data
+ * @return        error code
+ * @retval  0     success
+ * @retval  1     malloc error
+ *
+ * @warning    This function allocates memory for node->keys and node->vals;
+ *             thence, these two members should not have exclusive ownership
+ *             on anything before a call to this function as their value will
+ *             be overwritten.
+ * @node       Serialization should be a more accurate name, but marshal is
+ *             adopted as it's shorter.
+ */
 static inline
 int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
+/**
+ * @brief   preallocate node-sized space in file
+ *
+ * This function reserves a free node-sized block in self->file and returns a
+ * node index (not direct file offset) referring to that block.
+ *
+ * @param   self  bptr obj.
+ * @return  the node index that's allocated.
+ * @retval  0     failure; bptr_errno is set.
+ *
+ * @remark  the return value is node indx. This means the actual file offset is
+ *          calculated thru. `ret * self->node_size`.
+ */
 static inline
 bptr_node_t bptr_node_prealloc (struct bptr *self);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
 /*----------------------------- Public Functions -----------------------------*/
-// node->{prev, next} are left uninitialized; the 
+// node->{prev, next} are left uninitialized; the
 // caller is responsible to write that
 struct bptr_node *bptr_node_new
  (struct bptr *self, _Bool is_leaf, bptr_node_t parent)
@@ -208,7 +247,6 @@ bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node)
 
 
 /*---------------------------- Private Functions -----------------------------*/
-// Write node to fbuf
 static inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 {
@@ -227,15 +265,13 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
    else                 _WRITE_FIELDS(BPTR_NORM_PTR_TYPE);
 #undef _WRITE_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
-   
+
    iter_write(buf_it, node->keys,
              self->key_size * node->key_count);
    iter_write(buf_it, node->vals, _node_val_arr_size(self, node));
 }
 
 
-// This function allocates memory for keys and vals.
-// keys and vals shouldn't own memory before a call to this function
 static inline
 int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 {
@@ -254,7 +290,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
    else                 _READ_FIELDS(uint64_t);
 #undef _READ_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
-   
+
    node->is_leaf = (self->height == node->level);
    node->is_dirty = 0;
    _node_kv_malloc(self, node);
