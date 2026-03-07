@@ -73,6 +73,19 @@
       (self)->value_size * (node)->key_count : \
       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
                          BPTR_NORM_PTR_BYTE * ((node)->key_count + 1)))
+
+#define __node_key_insert(self, node, key_ptr, idx) do \
+{ \
+   memcpy((char*)(node)->keys + (idx) * (self)->key_size, \
+          (key_ptr), (self)->key_size); \
+} while (0)
+
+#define __node_val_insert(self, node, val_ptr, idx) do \
+{ \
+   uint_fast16_t val_size = (node)->is_leaf ? (self)->value_size : \
+                                              BPTR_PTR_SIZE; \
+   memcpy((char*)(node)->vals + (idx) * val_size, (val_ptr), val_size); \
+}
 /*---------------------------- Private Macro END -----------------------------*/
 
 
@@ -339,5 +352,21 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
       ret = offset / self->node_size;
     }
    return ret;
+}
+
+
+// It's caller's responsibility to check it's valid to insert the node
+static inline
+void _node_key_insert(struct bptr *self, struct bptr_node *node,
+                      const void *key, uint_fast32_t idx)
+{
+}
+
+
+// It's caller's responsibility to check it's valid to insert the node
+static inline
+void _node_val_insert(struct bptr *self, struct bptr_node *node,
+                      const void *val, uint_fast32_t idx)
+{
 }
 /*-------------------------- Private Functions END ---------------------------*/
