@@ -127,7 +127,7 @@ struct bptr_node *bptr_node_new
          goto LOAD_PARENT_ERR;
        }
       node->level = parent_node->level + 1;
-      bptr_node_unload(parent_node);
+      bptr_node_unload(self, parent_node);
     }
    else
       node->level = 0;
