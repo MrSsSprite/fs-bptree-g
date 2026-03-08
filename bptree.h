@@ -7,6 +7,14 @@
 
 /*------------------------------ Public Define -------------------------------*/
 #define BPTR_CURRENT_VERSION (0u)
+
+// Error Codes
+#define BPTR_E_SUCCESS     (0)
+// Sytem & Program-side Errors (Positive)
+#define BPTR_E_OOM         (1)      // OOM: Out Of Memory
+#define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable
+#define BPTR_E_NO_IMPL     (0xBEEF) // Not yet implemented
+// User & Argument Errors (Negative)
 /*---------------------------- Public Define END -----------------------------*/
 
 /*------------------------ Public Struct Declaration -------------------------*/
