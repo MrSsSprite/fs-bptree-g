@@ -157,7 +157,9 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
       find_res.node->prev = find_res.node->next = 0;
       find_res.idx = 0;
     }
+
    //TODO
+   exit(BPTR_E_TODO);
 }
 /*---------------------- Public Function Definition END ----------------------*/
 
