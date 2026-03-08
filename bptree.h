@@ -12,8 +12,8 @@
 #define BPTR_E_SUCCESS     (0)
 // Sytem & Program-side Errors (Positive)
 #define BPTR_E_OOM         (1)      // OOM: Out Of Memory
-#define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable
-#define BPTR_E_NO_IMPL     (0xBEEF) // Not yet implemented
+#define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable (57005 dec.)
+#define BPTR_E_TODO        (0xBEEF) // Not yet implemented (48879 dec.)
 // User & Argument Errors (Negative)
 /*---------------------------- Public Define END -----------------------------*/
 
