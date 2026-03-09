@@ -503,4 +503,52 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
            node->vals + idx_plus1 * val_size,
            (val_cnt - idx_plus1) * val_size);
 }
+
+
+static
+bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
+                            const void *key, const void *val)
+{
+   struct bptr_node *new_n, *parent_n;
+   _Bool has_new_parent;
+
+   // Check full; error if not already full
+   if (node->key_count != (node->is_leaf ? self->node_boundry.leaf.up :
+                                           self->node_boundry.brch.up))
+    { bptr_errno = -1; goto NEW_N_MALLOC_ERR; }
+
+   if (node->parent == 0)
+    {
+      parent_n = bptr_node_new(self, 0, 0);
+      if (parent_n == 0)
+         switch (bptr_errno)
+          {
+         case 1: bptr_errno = 1; break;
+         case 2: bptr_errno = 2; break;
+         default:bptr_errno = 0xDEAD; break;
+          }
+      goto PAR_N_MALLOC_ERR;
+      has_new_parent = 1;
+      //TODO: add orig. node into parent_n->vals
+    }
+   else
+      has_new_parent = 0;
+
+   new_n = bptr_node_new(self, 1, node->parent);
+   if (new_n == NULL) { return 0; /* TODO: err handling */ };
+
+   if (node->is_leaf)
+    {
+    }
+   else
+    {
+    }
+
+// Error Handling Zone
+   bptr_node_free(new_n);
+NEW_N_MALLOC_ERR:
+   if (has_new_parent) bptr_node_free(parent_n);
+PAR_N_MALLOC_ERR:
+   return 0;
+}
 /*-------------------------- Private Functions END ---------------------------*/
