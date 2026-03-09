@@ -387,4 +387,24 @@ void _node_val_insert(struct bptr *self, struct bptr_node *node,
    // copy into slot
    memcpy(tar_p, val, val_sz);
 }
+
+
+
+static inline
+void _node_key_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx)
+{
+   uint_fast32_t idx_plus1 = idx + 1;
+
+   memmove(node->keys + idx * self->key_size,
+           node->keys + idx_plus1 * self->key_size,
+           (node->key_count - idx_plus1) * self->key_size);
+}
+
+
+static inline
+void _node_val_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx)
+{
+}
 /*-------------------------- Private Functions END ---------------------------*/
