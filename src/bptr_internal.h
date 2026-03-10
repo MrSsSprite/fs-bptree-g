@@ -17,7 +17,7 @@
 #define BPTR_MAGIC_STR           "BPTR"
 // Temporarily hardcoded in dev stage
 // Default block size
-#define BPTR_BLOCK_BYTE          512
+#define BPTR_NODE_BYTE_DEFAULT   512
 /*---------------------------- Public Defines END ----------------------------*/
 
 
@@ -56,8 +56,7 @@ struct bptr
    /* ファイル識別情報 */
    uint_least32_t version;
    _Bool is_lite;
-   uint_fast32_t block_size;
-   
+
    /* 木構造 */
    bptr_node_t root_idx;
    uint_fast32_t node_size;

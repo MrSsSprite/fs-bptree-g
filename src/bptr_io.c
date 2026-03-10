@@ -46,7 +46,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
       goto FOPEN_ERR;
     }
    /* malloc for file buffer */
-   self->fbuf = malloc(self->block_size);
+   self->fbuf = malloc(self->node_size);
    if (self->fbuf == NULL)
     {
       err_code = 2;
@@ -60,9 +60,6 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    *(uint32_t*)memit = (self->is_lite) ?
                        0x80 | BPTR_CURRENT_VERSION : BPTR_CURRENT_VERSION;
    memit += 4;
-   *(uint32_t*)memit = self->block_size;
-   memit += 4;
-
    *(uint32_t*)memit = self->node_size;
    memit += 4;
 
@@ -83,7 +80,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
                                        BPTR_NORM_PTR_BYTE);
 
    /* Flush the Buffer to the file */
-   if (fwrite(self->fbuf, self->block_size, 1, self->file) != 1)
+   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
     {
       err_code = 3;
       goto FWRITE_ERR;
@@ -137,15 +134,15 @@ int bptr_io_fload(struct bptr *self, const char *filename)
       goto MVB_INVALID_ERR;
     }
    self->is_lite = (mvb_buf[1] & 0x80) ? 1 : 0;
-   self->block_size = mvb_buf[2];
-   if (self->block_size < BPTR_NODE_METADATA_BYTE + 24)
+   self->node_size = mvb_buf[2];
+   if (self->node_size < BPTR_NODE_METADATA_BYTE + 24)
     {
       err_code = -3;
       goto MVB_INVALID_ERR;
     }
 
    /* malloc file buffer */
-   self->fbuf = malloc(self->block_size);
+   self->fbuf = malloc(self->node_size);
    if (self->fbuf == NULL)
     {
       err_code = 3;
@@ -154,7 +151,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
 
    /* Read the header block */
    rewind(self->file);
-   if (fread(self->fbuf, self->block_size, 1, self->file) != 1)
+   if (fread(self->fbuf, self->node_size, 1, self->file) != 1)
     {
       err_code = 4;
       goto READ_HEADER_BLOCK_ERR;
@@ -262,7 +259,7 @@ while (0)
       bptr_errno = 2;
       return 0;
     }
-   pos /= self->block_size;
+   pos /= self->node_size;
 
    if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
     {

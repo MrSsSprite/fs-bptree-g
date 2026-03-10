@@ -77,7 +77,6 @@ struct bptr *bptr_init
    /* Write Metadata */
    self->version = BPTR_CURRENT_VERSION;
    self->is_lite = is_lite;
-   self->block_size = BPTR_BLOCK_BYTE;
    self->free_list.head = self->free_list.cnt = self->root_idx = 0;
    self->node_size = node_size;
    self->key_size = key_size;
