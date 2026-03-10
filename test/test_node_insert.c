@@ -721,7 +721,7 @@ void test_large_keys_small_values(void)
    print_node_capacity(bptr, node);
 
    /* Use 16-byte keys as 4 ints */
-   typedef struct { int vals[4]; } key16_t;
+   typedef struct { uint32_t vals[4]; } key16_t;
    key16_t k1 = {{1, 0, 0, 0}};
    key16_t k2 = {{2, 0, 0, 0}};
    key16_t k3 = {{0, 0, 0, 1}};
@@ -751,8 +751,8 @@ void test_small_keys_large_values(void)
 
    print_node_capacity(bptr, node);
 
-   _key_insert_test(bptr, node, 0, int, 100);
-   _key_insert_test(bptr, node, 1, int, 200);
+   _key_insert_test(bptr, node, 0, uint32_t, 100);
+   _key_insert_test(bptr, node, 1, uint32_t, 200);
 
    int expected[] = {100, 200};
    assert(verify_node_keys(node, expected, 2));
@@ -770,9 +770,11 @@ void test_equal_mixed_sizes(void)
    struct bptr *bptr = bptr_init(f_nm, 1, 4096, 32, 32, cmp_i);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, 1, 0);
+   assert(node);
 
    print_node_capacity(bptr, node);
 
+   // Error int is not 32-byte val
    _key_insert_test(bptr, node, 0, int, 100);
    _key_insert_test(bptr, node, 1, int, 200);
 
