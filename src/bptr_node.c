@@ -406,5 +406,12 @@ static inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx)
 {
+   uint_fast32_t idx_plus1 = idx + 1,
+                 val_cnt = _node_val_cnt(node),
+                 val_size = _node_val_size(self, node);
+
+   memmove(node->vals + idx * val_size,
+           node->vals + idx_plus1 * val_size,
+           (val_cnt - idx_plus1) * val_size);
 }
 /*-------------------------- Private Functions END ---------------------------*/
