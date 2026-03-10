@@ -7,6 +7,15 @@
 #include "../src/bptr_node.c"
 
 
+#define _key_insert_test(self, node, idx, type, val) do \
+{ \
+   type var = (val); \
+   _node_key_insert((self), (node), &var, idx); \
+   assert(((type*)node->keys)[(idx)] == (val)); \
+   (node)->key_count++; \
+} while (0)
+
+
 int cmp_i(const void *lhs, const void *rhs)
 { return *(const int*)lhs - *(const int *)rhs; }
 
@@ -21,9 +30,8 @@ void print_node_keys(struct bptr_node *node)
 }
 
 
-void test_insert_middle(void)
+void test_keys_insert(void)
 {
-   int val;
    static const char *f_nm = "test_node_insert.bptr";
    struct bptr *bptr = bptr_init(f_nm, 1, 512,
                                  sizeof(int), sizeof(int), cmp_i);
@@ -31,26 +39,15 @@ void test_insert_middle(void)
    struct bptr_node *node = bptr_node_new(bptr, 1, 0);
    assert(node);
 
-   val = 123;
-   printf("Key count: %" PRIu32 ", Key max: %" PRIuFAST16 "\n", node->key_count, bptr->node_boundry.leaf.up - 1);
-   _node_key_insert(bptr, node, &val, 0);
-   assert(((int*)node->keys)[0] == 123);
-   node->key_count++;
+   printf("Key count: %" PRIu32 ", Key max: %" PRIuFAST16 "\n",
+          node->key_count, bptr->node_boundry.leaf.up - 1);
+#define key_insert_test(idx, val) \
+   _key_insert_test(bptr, node, (idx), int, (val))
 
-   val = 789;
-   _node_key_insert(bptr, node, &val, 1);
-   assert(((int*)node->keys)[1] == 789);
-   node->key_count++;
-
-   val = 321;
-   _node_key_insert(bptr, node, &val, 0);
-   assert(((int*)node->keys)[0] == 321);
-   node->key_count++;
-
-   val = 456;
-   _node_key_insert(bptr, node, &val, 2);
-   assert(((int*)node->keys)[2] == 456);
-   node->key_count++;
+   key_insert_test(0, 123);
+   key_insert_test(1, 789);
+   key_insert_test(0, 321);
+   key_insert_test(2, 456);
 
    print_node_keys(node);
 
@@ -62,7 +59,7 @@ void test_insert_middle(void)
 
 int main(void)
 {
-   test_insert_middle();
+   test_keys_insert();
 
    return 0;
 }
