@@ -14,7 +14,7 @@
 { \
    type var = (val); \
    _node_key_insert((self), (node), &var, idx); \
-   assert(((type*)node->keys)[(idx)] == (val)); \
+   assert(memcmp(((type*)(node)->keys) + (idx), &var, sizeof(type)) == 0); \
    (node)->key_count++; \
 } while (0)
 
