@@ -9,6 +9,13 @@
 #include "../bptree.h"
 #include "../src/bptr_node.c"
 
+/* Large key/value types for testing with larger data sizes */
+typedef struct { uint32_t v[4]; } key16_t;
+typedef struct { uint32_t v[8]; } key32_t;
+
+/* Helper macro for creating key32_t from a single uint32_t value */
+#define KEY32(val) ((key32_t){{ (val), 0, 0, 0, 0, 0, 0, 0 }})
+
 
 #define _key_insert_test(self, node, idx, type, val) do \
 { \
@@ -47,6 +54,12 @@ int cmp_u64(const void *lhs, const void *rhs)
 {
    return *(const uint64_t*)lhs < *(const uint64_t*)rhs ? -1 :
           *(const uint64_t*)lhs > *(const uint64_t*)rhs ? 1 : 0;
+}
+
+/* Comparator for key32_t (32-byte keys) */
+int cmp_key32(const void *lhs, const void *rhs)
+{
+   return memcmp(lhs, rhs, sizeof(key32_t));
 }
 
 
@@ -90,6 +103,26 @@ bool verify_node_keys(struct bptr_node *node, const int *expected, uint32_t coun
           return false;
        }
     }
+   return true;
+}
+
+/* Generic verification function using memcmp for arbitrary key sizes */
+bool verify_node_keys_memcmp(struct bptr_node *node, const void *expected,
+                             uint32_t count, size_t key_size)
+{
+   if (node->key_count != count) {
+      printf("  FAIL: key_count mismatch (expected %" PRIu32 ", got %" PRIu32 ")\n",
+             count, node->key_count);
+      return false;
+   }
+   const char *arr = node->keys;
+   const char *exp = expected;
+   for (uint32_t i = 0; i < count; i++) {
+      if (memcmp(arr + i * key_size, exp + i * key_size, key_size) != 0) {
+         printf("  FAIL: key[%" PRIu32 "] mismatch\n", i);
+         return false;
+      }
+   }
    return true;
 }
 
@@ -633,7 +666,7 @@ void test_node_size_capacity_scaling(void)
 { \
    ktype var = (kval); \
    _node_key_insert((self), (node), &var, idx); \
-   assert(((ktype*)node->keys)[(idx)] == (kval)); \
+   assert(memcmp((const char*)(node)->keys + (idx) * sizeof(ktype), &var, sizeof(ktype)) == 0); \
    (node)->key_count++; \
 } while (0)
 
@@ -767,19 +800,27 @@ void test_equal_mixed_sizes(void)
 {
    puts("\n=== Test: Equal larger sizes (32 bytes keys, 32 bytes values) ===");
    static const char *f_nm = "test_equal_32.bptr";
-   struct bptr *bptr = bptr_init(f_nm, 1, 4096, 32, 32, cmp_i);
+   struct bptr *bptr = bptr_init(f_nm, 1, 4096, sizeof(key32_t), sizeof(key32_t), cmp_key32);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, 1, 0);
    assert(node);
 
    print_node_capacity(bptr, node);
 
-   // Error int is not 32-byte val
-   _key_insert_test(bptr, node, 0, int, 100);
-   _key_insert_test(bptr, node, 1, int, 200);
+   /* Use key32_t for 32-byte keys */
+   key32_t k1 = KEY32(100);
+   key32_t k2 = KEY32(200);
+   key32_t k3 = KEY32(50);
 
-   int expected[] = {100, 200};
-   assert(verify_node_keys(node, expected, 2));
+   _node_key_insert(bptr, node, &k1, 0);
+   node->key_count++;
+   _node_key_insert(bptr, node, &k2, 1);
+   node->key_count++;
+   _node_key_insert(bptr, node, &k3, 0);
+   node->key_count++;
+
+   key32_t expected[] = {k3, k1, k2};
+   assert(verify_node_keys_memcmp(node, expected, 3, sizeof(key32_t)));
    puts("  PASS: Equal larger sizes work correctly");
 
    bptr_node_free(node);
