@@ -1,20 +1,6 @@
-#include <stdio.h>
-#include <assert.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdint.h>
+#include "test_node_insert.h"
 
-#include "../src/bptr_internal.h"
-#include "../bptree.h"
 #include "../src/bptr_node.c"
-
-/* Large key/value types for testing with larger data sizes */
-typedef struct { uint32_t v[4]; } key16_t;
-typedef struct { uint32_t v[8]; } key32_t;
-
-/* Helper macro for creating key32_t from a single uint32_t value */
-#define KEY32(val) ((key32_t){{ (val), 0, 0, 0, 0, 0, 0, 0 }})
 
 
 #define _key_insert_test(self, node, idx, type, val) do \
@@ -44,23 +30,6 @@ typedef struct { uint32_t v[8]; } key32_t;
       bptr_destroy(bptr); \
       remove(filename); \
    } while (0)
-
-
-int cmp_i(const void *lhs, const void *rhs)
-{ return *(const int*)lhs - *(const int *)rhs; }
-
-/* Comparator for uint64_t keys/values */
-int cmp_u64(const void *lhs, const void *rhs)
-{
-   return *(const uint64_t*)lhs < *(const uint64_t*)rhs ? -1 :
-          *(const uint64_t*)lhs > *(const uint64_t*)rhs ? 1 : 0;
-}
-
-/* Comparator for key32_t (32-byte keys) */
-int cmp_key32(const void *lhs, const void *rhs)
-{
-   return memcmp(lhs, rhs, sizeof(key32_t));
-}
 
 
 void print_node_keys(struct bptr_node *node)
