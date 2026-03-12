@@ -1,18 +1,19 @@
 CC = gcc
 CFLAGS = -g -Wall
 
-TEST_UNIT = test_node_key_insert.c
 SRC_DIR = ../src
 SRC_REQ_SCOPES = core io
 TEST_SRC = ./test_node_insert.c
-TARGET = test_node_insert
 
-SRCS = $(addprefix $(SRC_DIR)/bptr_, $(addsuffix .c, $(SRC_REQ_SCOPES))) $(TEST_SRC)
+TEST_UNITS = test_node_key_insert.c test_node_val_insert.c
+TARGETS = $(TEST_UNITS:.c=)
 
-all: $(TARGET)
+SHARED_SRCS = $(addprefix $(SRC_DIR)/bptr_, $(addsuffix .c, $(SRC_REQ_SCOPES))) $(TEST_SRC)
 
-$(TARGET): $(TEST_UNIT) $(SRCS)
-	$(CC) $(TEST_UNIT) $(SRCS) $(CFLAGS) -o $(TARGET)
+all: $(TARGETS)
+
+$(TARGETS): %: %.c $(SHARED_SRCS)
+	$(CC) $< $(SHARED_SRCS) $(CFLAGS) -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGETS)
