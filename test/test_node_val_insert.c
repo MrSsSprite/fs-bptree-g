@@ -72,14 +72,14 @@ void test_to_full(bptr_config *cfg)
    assert(node);
 
    uint_fast32_t i = 0, sz_mx;
-   if (!node->is_leaf) test_insert_noincr(bptr, node, i, int32_t, i);
-   i++;
+   if (!node->is_leaf) { test_insert_noincr(bptr, node, i, int32_t, i); i++; }
    for (sz_mx = (node->is_leaf ? bptr->node_boundry.leaf.up :
-                                 bptr->node_boundry.brch.up + 1);
+                                 bptr->node_boundry.brch.up + 1) - 1;
         i < sz_mx; i++)
-      test_insert(bptr, node, i, int32_t, i);
+      test_insert(bptr, node, i, int32_t, -i);
 
    test_print_vals(bptr, node, int32_t, PRIi32);
+   test_cleanup(cfg, bptr, node);
 }
 
 
