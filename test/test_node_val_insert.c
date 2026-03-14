@@ -12,6 +12,19 @@
    remove((cfg)->f_nm); \
 } while (0)
 
+#define test_print_properties(bptr, node) do \
+{ \
+   printf("file: \"%s\"\n", cfg->f_nm); \
+   printf("is_lite=%d, is_leaf=%d, node_sz=%" PRIuFAST32 "\n", bptr->is_lite, node->is_leaf, bptr->node_size); \
+   fputs("boundry:\t", stdout); \
+   if (node->is_leaf) \
+      printf("up=%" PRIuFAST16 ", low=%" PRIuFAST16 "\n", \
+             bptr->node_boundry.leaf.up, bptr->node_boundry.leaf.low); \
+   else \
+      printf("up=%" PRIuFAST16 ", low=%" PRIuFAST16 "\n", \
+             bptr->node_boundry.brch.up, bptr->node_boundry.brch.low); \
+} while (0)
+
 #define test_print_vals(bptr, node, type, pri_t) do \
 { \
    type *arr = (node)->vals; \
@@ -68,11 +81,11 @@ norm_brch_cfg = { "norm_brch_cfg.bptr", 0, 0, 512 };
 void test_insert_empty(bptr_config *cfg)
 {
    puts("\n=== Test: Insert into empty node ===");
-   printf("Config: %s\n", cfg->f_nm);
    struct bptr *bptr = bptr_init_cfg(cfg, int32_t, int32_t, cmp_i32);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, cfg->is_leaf, 0);
    assert(node);
+   test_print_properties(bptr, node);
 
    uint_fast32_t idx = 0;
    if (!node->is_leaf)
@@ -91,11 +104,11 @@ void test_insert_empty(bptr_config *cfg)
 void test_to_full(bptr_config *cfg)
 {
    puts("\n=== Test: Insert until full ===");
-   printf("Config: %s\n", cfg->f_nm);
    struct bptr *bptr = bptr_init_cfg(cfg, int32_t, int32_t, cmp_i32);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, cfg->is_leaf, 0);
    assert(node);
+   test_print_properties(bptr, node);
 
    uint_fast32_t i = 0, sz_mx;
    if (!node->is_leaf) { test_insert_noincr(bptr, node, 0, int32_t, 999); i++; }
