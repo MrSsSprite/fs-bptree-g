@@ -6,7 +6,7 @@
 #define _key_insert_test(self, node, idx, type, val) do \
 { \
    type var = (val); \
-   _node_key_insert((self), (node), &var, idx); \
+   _node_key_insert((self), (node), &var, (idx)); \
    assert(memcmp(((type*)(node)->keys) + (idx), &var, sizeof(type)) == 0); \
    (node)->key_count++; \
 } while (0)

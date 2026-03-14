@@ -4,6 +4,9 @@
 int cmp_i(const void *lhs, const void *rhs)
 { return *(const int*)lhs - *(const int *)rhs; }
 
+int cmp_i32(const void *lhs, const void *rhs)
+{ return *(const int32_t*)lhs - *(const int32_t *)rhs; }
+
 /* Comparator for uint64_t keys/values */
 int cmp_u64(const void *lhs, const void *rhs)
 {
