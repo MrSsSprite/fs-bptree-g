@@ -19,15 +19,36 @@
    for (uint_fast32_t i = 0, \
                       ed = (node)->key_count + ((node)->is_leaf ? 0 : 1); \
         i < ed; i++) \
-      printf("%" pri_t ", ", arr[i]); \
+    { \
+      if ((node)->is_leaf) printf("%" pri_t ", ", arr[i]); \
+      else if ((bptr)->is_lite) printf("%" BPTR_LITE_PRI_TYPE ", ", arr[i]); \
+      else                      printf("%" BPTR_NORM_PRI_TYPE ", ", arr[i]); \
+    } \
    puts("]"); \
 } while (0)
 
 #define test_insert_noincr(bptr, node, idx, type, val) do \
 { \
    type var = (val); \
-   _node_val_insert((bptr), (node), &var, (idx)); \
-   assert(memcmp(((type*)(node)->vals) + (idx), &var, sizeof(type)) == 0); \
+   if ((node)->is_leaf) \
+    { \
+      _node_val_insert((bptr), (node), &var, (idx)); \
+       assert(memcmp(((type*)(node)->vals) + (idx), &var, sizeof(var)) == 0); \
+    } \
+   else if ((bptr)->is_lite) \
+    { \
+      BPTR_LITE_PTR_TYPE varp = var; \
+      _node_val_insert((bptr), (node), &varp, (idx)); \
+      assert(memcmp(((BPTR_LITE_PTR_TYPE*)(node)->vals) + (idx), \
+                    &var, sizeof(BPTR_LITE_PTR_TYPE)) == 0); \
+    } \
+   else \
+    { \
+      BPTR_NORM_PTR_TYPE varp = var; \
+      _node_val_insert((bptr), (node), &varp, (idx)); \
+      assert(memcmp(((BPTR_NORM_PTR_TYPE*)(node)->vals) + (idx), \
+                    &var, sizeof(BPTR_NORM_PTR_TYPE)) == 0); \
+    }  \
 } while (0)
 
 #define test_insert(bptr, node, idx, type, val) do \
@@ -39,12 +60,15 @@
 
 bptr_config
 default_cfg = { "default_config.bptr", 1, 1, 512 },
-default_brch_cfg = { "default_config.bptr", 1, 0, 512 };
+default_brch_cfg = { "default_brch_cfg.bptr", 1, 0, 512 },
+norm_leaf_cfg = { "norm_leaf_cfg.bptr", 0, 1, 512 },
+norm_brch_cfg = { "norm_brch_cfg.bptr", 0, 0, 512 };
 
 
 void test_insert_empty(bptr_config *cfg)
 {
    puts("\n=== Test: Insert into empty node ===");
+   printf("Config: %s\n", cfg->f_nm);
    struct bptr *bptr = bptr_init_cfg(cfg, int32_t, int32_t, cmp_i32);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, cfg->is_leaf, 0);
@@ -66,17 +90,19 @@ void test_insert_empty(bptr_config *cfg)
 
 void test_to_full(bptr_config *cfg)
 {
+   puts("\n=== Test: Insert until full ===");
+   printf("Config: %s\n", cfg->f_nm);
    struct bptr *bptr = bptr_init_cfg(cfg, int32_t, int32_t, cmp_i32);
    assert(bptr);
    struct bptr_node *node = bptr_node_new(bptr, cfg->is_leaf, 0);
    assert(node);
 
    uint_fast32_t i = 0, sz_mx;
-   if (!node->is_leaf) { test_insert_noincr(bptr, node, i, int32_t, i); i++; }
+   if (!node->is_leaf) { test_insert_noincr(bptr, node, 0, int32_t, 999); i++; }
    for (sz_mx = (node->is_leaf ? bptr->node_boundry.leaf.up :
                                  bptr->node_boundry.brch.up + 1) - 1;
         i < sz_mx; i++)
-      test_insert(bptr, node, i, int32_t, -i);
+      test_insert(bptr, node, i, int32_t, 2 * i);
 
    test_print_vals(bptr, node, int32_t, PRIi32);
    test_cleanup(cfg, bptr, node);
@@ -88,6 +114,8 @@ int main(void)
    test_insert_empty(&default_cfg);
    test_insert_empty(&default_brch_cfg);
    test_to_full(&default_cfg);
+   test_to_full(&default_brch_cfg);
+   test_to_full(&norm_leaf_cfg);
 
    return 0;
 }

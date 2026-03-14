@@ -17,6 +17,8 @@
 /*---------------------------- Public Macros END -----------------------------*/
 /* Helper macro for creating key32_t from a single uint32_t value */
 #define KEY32(val) ((key32_t){{ (val), 0, 0, 0, 0, 0, 0, 0 }})
+#define BPTR_LITE_PRI_TYPE       PRIu32
+#define BPTR_NORM_PRI_TYPE       PRIu64
 
 /*------------------------------ Public Structs ------------------------------*/
 /* Large key/value types for testing with larger data sizes */
