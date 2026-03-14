@@ -28,15 +28,15 @@
 
 #define test_print_vals(bptr, node, type, pri_t) do \
 { \
-   type *arr = (node)->vals; \
+   void *arr = (node)->vals; \
    putchar('['); \
    for (uint_fast32_t i = 0, \
                       ed = (node)->key_count + ((node)->is_leaf ? 0 : 1); \
         i < ed; i++) \
     { \
-      if ((node)->is_leaf) printf("%" pri_t ", ", arr[i]); \
-      else if ((bptr)->is_lite) printf("%" BPTR_LITE_PRI_TYPE ", ", arr[i]); \
-      else                      printf("%" BPTR_NORM_PRI_TYPE ", ", arr[i]); \
+      if ((node)->is_leaf) printf("%" pri_t ", ", ((type*)arr)[i]); \
+      else if ((bptr)->is_lite) printf("%" BPTR_LITE_PRI_TYPE ", ", ((BPTR_LITE_PTR_TYPE*)arr)[i]); \
+      else                      printf("%" BPTR_NORM_PRI_TYPE ", ", ((BPTR_NORM_PTR_TYPE*)arr)[i]); \
     } \
    puts("]"); \
 } while (0)
@@ -54,14 +54,14 @@
       BPTR_LITE_PTR_TYPE varp = var; \
       _node_val_insert((bptr), (node), &varp, (idx)); \
       assert(memcmp(((BPTR_LITE_PTR_TYPE*)(node)->vals) + (idx), \
-                    &var, sizeof(BPTR_LITE_PTR_TYPE)) == 0); \
+                    &varp, sizeof(BPTR_LITE_PTR_TYPE)) == 0); \
     } \
    else \
     { \
       BPTR_NORM_PTR_TYPE varp = var; \
       _node_val_insert((bptr), (node), &varp, (idx)); \
       assert(memcmp(((BPTR_NORM_PTR_TYPE*)(node)->vals) + (idx), \
-                    &var, sizeof(BPTR_NORM_PTR_TYPE)) == 0); \
+                    &varp, sizeof(BPTR_NORM_PTR_TYPE)) == 0); \
     }  \
 } while (0)
 
