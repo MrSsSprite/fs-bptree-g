@@ -2,6 +2,7 @@
 #include "../src/bptr_node.c"
 
 
+/*---------------------------------- Macros ----------------------------------*/
 #define bptr_init_cfg(cfg, key_type, val_type, cmp) \
    (bptr_init((cfg)->f_nm, (cfg)->is_lite, (cfg)->node_sz, \
               sizeof(key_type), sizeof(val_type), (cmp)))
@@ -69,15 +70,22 @@
    test_insert_noincr(bptr, node, idx, type, val); \
    (node)->key_count++; \
 } while (0)
+/*-------------------------------- Macros End --------------------------------*/
 
 
+/*----------------------------- Config Profiles ------------------------------*/
 bptr_config
 default_cfg = { "default_config.bptr", 1, 1, 512 },
 default_brch_cfg = { "default_brch_cfg.bptr", 1, 0, 512 },
 norm_leaf_cfg = { "norm_leaf_cfg.bptr", 0, 1, 512 },
 norm_brch_cfg = { "norm_brch_cfg.bptr", 0, 0, 512 };
 
+bptr_config *configs[] =
+ { &default_cfg, &default_brch_cfg, &norm_leaf_cfg, &norm_brch_cfg };
+/*--------------------------- Config Profiles END ----------------------------*/
 
+
+/*-------------------------------- Test Units --------------------------------*/
 void test_insert_empty(bptr_config *cfg)
 {
    puts("\n=== Test: Insert into empty node ===");
@@ -111,6 +119,8 @@ void test_to_full(bptr_config *cfg)
    test_print_properties(bptr, node);
 
    uint_fast32_t i = 0, sz_mx;
+   // because val count == key count + 1 on branch node, insert one value into 
+   // it without incremnt to assure it works correctly
    if (!node->is_leaf) { test_insert_noincr(bptr, node, 0, int32_t, 999); i++; }
    for (sz_mx = (node->is_leaf ? bptr->node_boundry.leaf.up :
                                  bptr->node_boundry.brch.up + 1) - 1;
@@ -120,15 +130,18 @@ void test_to_full(bptr_config *cfg)
    test_print_vals(bptr, node, int32_t, PRIi32);
    test_cleanup(cfg, bptr, node);
 }
+/*------------------------------ Test Units END ------------------------------*/
 
 
 int main(void)
 {
-   test_insert_empty(&default_cfg);
-   test_insert_empty(&default_brch_cfg);
-   test_to_full(&default_cfg);
-   test_to_full(&default_brch_cfg);
-   test_to_full(&norm_leaf_cfg);
+   for (bptr_config **cfg_it = configs,
+                    **ed = cfg_it + sizeof(configs)/sizeof(*configs);
+        cfg_it < ed; cfg_it++)
+    {
+      test_insert_empty(*cfg_it);
+      test_to_full(*cfg_it);
+    }
 
    return 0;
 }
