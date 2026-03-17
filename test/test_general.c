@@ -176,8 +176,8 @@ void test_default(bptr_config *cfg)
 /*----------------------------------- Main -----------------------------------*/
 int main(void)
 {
-   test_default(&default_cfg);
-   test_default(&default_brch_cfg);
+   for (size_t i = 0; i < sizeof(configs)/sizeof(*configs); i++)
+       test_default(configs[i]);
 
    return 0;
 }
