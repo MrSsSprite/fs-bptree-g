@@ -161,11 +161,11 @@ void test_default(bptr_config *cfg)
       BPTR_LITE_PTR_TYPE val_exp_bl[] = { 0, 1, 2, 3, 4, 5 };
       BPTR_NORM_PTR_TYPE val_exp_bn[] = { 0, 1, 2, 3, 4, 5 };
       if (node->is_leaf)
-         check_exp(bptr, node, key_exp, val_exp, 5);
+         assert(check_exp(bptr, node, key_exp, val_exp, 5));
       else if (bptr->is_lite)
-         check_exp(bptr, node, key_exp, val_exp_bl, 5);
+         assert(check_exp(bptr, node, key_exp, val_exp_bl, 5));
       else
-         check_exp(bptr, node, key_exp, val_exp_bn, 5);
+         assert(check_exp(bptr, node, key_exp, val_exp_bn, 5));
    }
 
    _kv_erase(bptr, node, 3);
@@ -176,11 +176,11 @@ void test_default(bptr_config *cfg)
       BPTR_LITE_PTR_TYPE val_exp_bl[] = { 0, 1, 3, 5 };
       BPTR_NORM_PTR_TYPE val_exp_bn[] = { 0, 1, 3, 5 };
       if (node->is_leaf)
-         check_exp(bptr, node, key_exp, val_exp, 3);
+         assert(check_exp(bptr, node, key_exp, val_exp, 3));
       else if (bptr->is_lite)
-         check_exp(bptr, node, key_exp, val_exp_bl, 3);
+         assert(check_exp(bptr, node, key_exp, val_exp_bl, 3));
       else
-         check_exp(bptr, node, key_exp, val_exp_bn, 3);
+         assert(check_exp(bptr, node, key_exp, val_exp_bn, 3));
    }
 
    test_cleanup(cfg, bptr, node);
