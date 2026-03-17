@@ -51,6 +51,13 @@
    _val_insert(bptr, node, idx, vtype, vval); \
 } while (0)
 
+#define _kv_erase(bptr, node, idx) do \
+{ \
+   _node_key_erase((bptr), (node), (idx)); \
+   _node_val_erase((bptr), (node), (idx) + ((node)->is_leaf ? 0 : 1)); \
+   node->key_count--; \
+} while (0)
+
 #define _print_keys(node, kpri, ktype) do \
 { \
    fputs("keys: [", stdout); \
@@ -149,16 +156,32 @@ void test_default(bptr_config *cfg)
 
    _print_kvs_lcl(bptr, node);
 
-   int32_t key_exp[] = { 1, 2, 3, 4, 5 }, *val_exp = key_exp;
-   BPTR_LITE_PTR_TYPE val_exp_bl[] = { 0, 1, 2, 3, 4, 5 };
-   BPTR_NORM_PTR_TYPE val_exp_bn[] = { 0, 1, 2, 3, 4, 5 };
-   if (node->is_leaf)
-      check_exp(bptr, node, key_exp, val_exp, 5);
-   else if (bptr->is_lite)
-      check_exp(bptr, node, key_exp, val_exp_bl, 5);
-   else
-      check_exp(bptr, node, key_exp, val_exp_bn, 5);
-   puts("check_exp succeeded!");
+   {
+      int32_t key_exp[] = { 1, 2, 3, 4, 5 }, *val_exp = key_exp;
+      BPTR_LITE_PTR_TYPE val_exp_bl[] = { 0, 1, 2, 3, 4, 5 };
+      BPTR_NORM_PTR_TYPE val_exp_bn[] = { 0, 1, 2, 3, 4, 5 };
+      if (node->is_leaf)
+         check_exp(bptr, node, key_exp, val_exp, 5);
+      else if (bptr->is_lite)
+         check_exp(bptr, node, key_exp, val_exp_bl, 5);
+      else
+         check_exp(bptr, node, key_exp, val_exp_bn, 5);
+   }
+
+   _kv_erase(bptr, node, 3);
+   _kv_erase(bptr, node, 1);
+   _print_kvs_lcl(bptr, node);
+   {
+      int32_t key_exp[] = { 1, 3, 5 }, *val_exp = key_exp;
+      BPTR_LITE_PTR_TYPE val_exp_bl[] = { 0, 1, 3, 5 };
+      BPTR_NORM_PTR_TYPE val_exp_bn[] = { 0, 1, 3, 5 };
+      if (node->is_leaf)
+         check_exp(bptr, node, key_exp, val_exp, 3);
+      else if (bptr->is_lite)
+         check_exp(bptr, node, key_exp, val_exp_bl, 3);
+      else
+         check_exp(bptr, node, key_exp, val_exp_bn, 3);
+   }
 
    test_cleanup(cfg, bptr, node);
 
