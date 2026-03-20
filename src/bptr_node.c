@@ -87,7 +87,7 @@
  * @param[in,out] self  bptr obj.
  * @param[in]     node  node obj. to be serialized.
  *
- * @node    Serialization should be a more accurate name, but marshal is
+ * @note    Serialization should be a more accurate name, but marshal is
  *          adopted as it's shorter.
  */
 static inline
@@ -125,6 +125,80 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
  */
 static inline
 bptr_node_t bptr_node_prealloc (struct bptr *self);
+/**
+ * @brief   Insert a key into keys
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     key   value of key to be copied into @c node->keys
+ * @param[in]     idx   index at which the key is inserted
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not increment @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_key_insert(struct bptr *self, struct bptr_node *node,
+                      const void *key, uint_fast32_t idx);
+/**
+ * @brief   Insert a val into vals
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     val   value of val to be copied into @c node->vals
+ * @param[in]     idx   index at which the val is inserted
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not increment @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_val_insert(struct bptr *self, struct bptr_node *node,
+                      const void *val, uint_fast32_t idx);
+/**
+ * @brief   Erase a Key from @c node->keys
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     idx   index of the key to be erased
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not modify @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_key_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx);
+/**
+ * @brief   Erase a val from @c node->vals
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     idx   index of the val to be erased
+ *
+ * @warning It's caller's responsibility to check it's valid to erase from the
+ *          node.
+ *
+ * @remark  This function does not modify @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_val_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -345,7 +419,6 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
 }
 
 
-// It's caller's responsibility to check it's valid to insert the node
 static inline
 void _node_key_insert(struct bptr *self, struct bptr_node *node,
                       const void *key, uint_fast32_t idx)
@@ -366,7 +439,6 @@ void _node_key_insert(struct bptr *self, struct bptr_node *node,
 }
 
 
-// It's caller's responsibility to check it's valid to insert the node
 static inline
 void _node_val_insert(struct bptr *self, struct bptr_node *node,
                       const void *val, uint_fast32_t idx)
