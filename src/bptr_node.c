@@ -73,6 +73,9 @@
       (self)->value_size * (node)->key_count : \
       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
                          BPTR_NORM_PTR_BYTE * ((node)->key_count + 1)))
+
+#define _node_val_cnt(node) \
+   ((node)->is_leaf ? (node)->key_count : (node)->key_count + 1)
 /*---------------------------- Private Macro END -----------------------------*/
 
 
@@ -84,7 +87,7 @@
  * @param[in,out] self  bptr obj.
  * @param[in]     node  node obj. to be serialized.
  *
- * @node    Serialization should be a more accurate name, but marshal is
+ * @note    Serialization should be a more accurate name, but marshal is
  *          adopted as it's shorter.
  */
 static inline
@@ -122,6 +125,80 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
  */
 static inline
 bptr_node_t bptr_node_prealloc (struct bptr *self);
+/**
+ * @brief   Insert a key into keys
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     key   value of key to be copied into @c node->keys
+ * @param[in]     idx   index at which the key is inserted
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not increment @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_key_insert(struct bptr *self, struct bptr_node *node,
+                      const void *key, uint_fast32_t idx);
+/**
+ * @brief   Insert a val into vals
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     val   value of val to be copied into @c node->vals
+ * @param[in]     idx   index at which the val is inserted
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not increment @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_val_insert(struct bptr *self, struct bptr_node *node,
+                      const void *val, uint_fast32_t idx);
+/**
+ * @brief   Erase a Key from @c node->keys
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     idx   index of the key to be erased
+ *
+ * @warning It's caller's responsibility to check it's valid to insert into the
+ *          node.
+ *
+ * @remark  This function does not modify @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_key_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx);
+/**
+ * @brief   Erase a val from @c node->vals
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] node  node
+ * @param[in]     idx   index of the val to be erased
+ *
+ * @warning It's caller's responsibility to check it's valid to erase from the
+ *          node.
+ *
+ * @remark  This function does not modify @c node->key_count . Caller should
+ *          perform such operation themselves, if needed.
+ * @note    This function assumes correct @c node->key_count . It causes
+ *          undefined behavior if such assumption is not fulfilled.
+ */
+static inline
+void _node_val_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -339,5 +416,74 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
       ret = offset / self->node_size;
     }
    return ret;
+}
+
+
+static inline
+void _node_key_insert(struct bptr *self, struct bptr_node *node,
+                      const void *key, uint_fast32_t idx)
+{
+   uint_fast32_t idx_plus1 = idx + 1,
+                 /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1 */
+                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
+                                       self->node_boundry.brch.up) - 1;
+   char *tar_p = (char*)node->keys + idx * self->key_size;
+
+   // insert idx is not last element
+   if (idx_plus1 != ed)
+      // reserve slot
+      memmove(tar_p + self->key_size, tar_p,
+              (node->key_count - idx) * self->key_size);
+   // copy into slot
+   memcpy(tar_p, key, self->key_size);
+}
+
+
+static inline
+void _node_val_insert(struct bptr *self, struct bptr_node *node,
+                      const void *val, uint_fast32_t idx)
+{
+   uint_fast32_t idx_plus1 = idx + 1,
+                 /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1
+                  * leaf: val_cnt == key_cnt; branch: val_cnt == key_cnt + 1 */
+                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
+                                       self->node_boundry.brch.up + 1) - 1;
+   uint_fast16_t val_sz = _node_val_size(self, node);
+   char *tar_p = (char*)node->vals + idx * val_sz;
+
+   // insert idx is not last element
+   if (idx_plus1 != ed)
+      // reserve slot
+      memmove(tar_p + val_sz, tar_p,
+              (_node_val_cnt(node) - idx) * val_sz);
+   // copy into slot
+   memcpy(tar_p, val, val_sz);
+}
+
+
+
+static inline
+void _node_key_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx)
+{
+   uint_fast32_t idx_plus1 = idx + 1;
+
+   memmove(node->keys + idx * self->key_size,
+           node->keys + idx_plus1 * self->key_size,
+           (node->key_count - idx_plus1) * self->key_size);
+}
+
+
+static inline
+void _node_val_erase(struct bptr *self, struct bptr_node *node,
+                     uint_fast32_t idx)
+{
+   uint_fast32_t idx_plus1 = idx + 1,
+                 val_cnt = _node_val_cnt(node),
+                 val_size = _node_val_size(self, node);
+
+   memmove(node->vals + idx * val_size,
+           node->vals + idx_plus1 * val_size,
+           (val_cnt - idx_plus1) * val_size);
 }
 /*-------------------------- Private Functions END ---------------------------*/
