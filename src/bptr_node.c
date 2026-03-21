@@ -511,44 +511,91 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 {
    struct bptr_node *new_n, *parent_n;
    _Bool has_new_parent;
+   uint_fast32_t max_sz = (node->is_leaf ? self->node_boundry.leaf.up :
+                                           self->node_boundry.brch.up) - 1;
 
    // Check full; error if not already full
-   if (node->key_count != (node->is_leaf ? self->node_boundry.leaf.up :
-                                           self->node_boundry.brch.up))
-    { bptr_errno = -1; goto NEW_N_MALLOC_ERR; }
+   if (node->key_count != max_sz)
+    { bptr_errno = -1; goto NODE_NOT_FULL_ERR; }
 
    if (node->parent == 0)
     {
       parent_n = bptr_node_new(self, 0, 0);
-      if (parent_n == 0)
+      if (parent_n == NULL)
          switch (bptr_errno)
           {
-         case 1: bptr_errno = 1; break;
-         case 2: bptr_errno = 2; break;
-         default:bptr_errno = 0xDEAD; break;
+         case BPTR_E_OOM:
+         case 2:
+            break;
+         default:          bptr_errno = BPTR_E_UNREACHABLE; break;
           }
       goto PAR_N_MALLOC_ERR;
       has_new_parent = 1;
-      //TODO: add orig. node into parent_n->vals
+      // add orig. node into parent_n->vals in advance
+      _node_val_insert(self, parent_n, node, 0);
     }
    else
+    {
       has_new_parent = 0;
+      parent_n = bptr_node_load(self, node->parent);
+      if (parent_n == NULL)
+         switch (bptr_errno)
+          {
+         case BPTR_E_OOM:
+         case -1:
+            break;
+         default:          bptr_errno = BPTR_E_UNREACHABLE; break;
+          }
+      goto PAR_N_MALLOC_ERR;
+    }
 
    new_n = bptr_node_new(self, 1, node->parent);
-   if (new_n == NULL) { return 0; /* TODO: err handling */ };
+   if (new_n == NULL) { bptr_errno = 200; goto NEW_N_MALLOC_ERR; };
 
    if (node->is_leaf)
     {
+      // new node gets up_bound / 2 keys; orig node retains other
+      new_n->key_count = self->node_boundry.leaf.up / 2;
+      node->key_count = max_sz - new_n->key_count;
+
+      memcpy(new_n->keys,
+             (char*)node->keys + node->key_count * self->key_size,
+             self->key_size * new_n->key_count);
+      memcpy(new_n->vals,
+             (char*)node->vals + node->key_count * _node_val_size(self, node),
+             self->value_size * new_n->key_count);
+      if (has_new_parent)
+       {
+         _node_key_insert(self, parent_n, new_n->keys, 0);
+         if (self->is_lite)
+          {
+            BPTR_LITE_PTR_TYPE new_n_idx = new_n->node_idx;
+            _node_val_insert(self, parent_n, &new_n_idx, 1);
+          }
+         else
+          {
+            BPTR_NORM_PTR_TYPE new_n_idx = new_n->node_idx;
+            _node_val_insert(self, parent_n, &new_n_idx, 1);
+          }
+         parent_n->key_count++;
+       }
+      else
+       {
+         // TODO: search for key of orig node in parent
+       }
     }
    else
     {
     }
+
+   // TODO: edge case: update self->root if the node being split is root
 
 // Error Handling Zone
    bptr_node_free(new_n);
 NEW_N_MALLOC_ERR:
    if (has_new_parent) bptr_node_free(parent_n);
 PAR_N_MALLOC_ERR:
+NODE_NOT_FULL_ERR:
    return 0;
 }
 /*-------------------------- Private Functions END ---------------------------*/
