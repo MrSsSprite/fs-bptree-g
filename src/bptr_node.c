@@ -80,7 +80,6 @@
 
 
 /*---------------------- Private Function Declarations -----------------------*/
-// Write node to fbuf
 /**
  * @brief   Marshal node data from struct to self->fbuf
  *
