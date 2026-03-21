@@ -198,6 +198,28 @@ void _node_key_erase(struct bptr *self, struct bptr_node *node,
 static inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx);
+/**
+ * @brief   Search for a key within a node's key array
+ *
+ * Performs a binary search to locate the first key in @p node that is not less
+ * than @p key . This index serves as the exact match or the potential insertion
+ * point.
+ *
+ * @param[in]  self  B+Tree instance.
+ * @param[in]  node  node to be searched.
+ * @param[in]  key   target key to locate.
+ *
+ * @return  The index of the lower bound of @p key
+ * @retval  index    If the key is found, this is the index of the match.
+ * @retval  index    If not found, this is the insertion point (the index of the
+ *                   smallest key greater than @p key , or @c node->key_count if
+ *                   @p key is the largest).
+ * @remark  If an exact match is not found, @c bptr_errno is set to @c -1 .
+ *          Otherwise, @c bptr_errno is set to @c 0 .
+ */
+static inline
+uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
+                          const void *key);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -502,6 +524,32 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
    memmove(node->vals + idx * val_size,
            node->vals + idx_plus1 * val_size,
            (val_cnt - idx_plus1) * val_size);
+}
+
+
+static inline
+uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
+                               const void *key)
+{
+   uint_fast32_t lo, md, hi;
+   // Edge Case: empty (i.e., key_count == 0)
+   int cmp_res = -1;
+
+   for (lo = 0, hi = node->key_count, md = hi / 2;
+        lo != hi; md = lo + (hi - lo) / 2)
+    {
+      cmp_res = self->compare(key, node->keys + md * self->key_size);
+      if (cmp_res < 0)
+         hi = md;
+      else if (cmp_res > 0)
+         lo = md + 1;
+      else
+         break;
+    }
+
+   if (cmp_res == 0) bptr_errno = 0;
+   else              bptr_errno = -1;
+   return md;
 }
 
 
