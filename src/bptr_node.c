@@ -51,16 +51,16 @@
    if ((node)->is_leaf) \
     { \
       (node)->keys = \
-         malloc(((self)->node_boundry.leaf.up - 1) * (self)->key_size); \
+         malloc(((self)->node_bound.leaf.up - 1) * (self)->key_size); \
       (node)->vals = \
-         malloc(((self)->node_boundry.leaf.up - 1) * (self)->value_size); \
+         malloc(((self)->node_bound.leaf.up - 1) * (self)->value_size); \
     } \
    else \
     { \
       (node)->keys = \
-         malloc(((self)->node_boundry.brch.up - 1) * (self)->key_size); \
+         malloc(((self)->node_bound.brch.up - 1) * (self)->key_size); \
       (node)->vals = \
-         malloc((self)->node_boundry.brch.up * BPTR_PTR_SIZE); \
+         malloc((self)->node_bound.brch.up * BPTR_PTR_SIZE); \
     } \
 } while (0)
 
@@ -425,8 +425,8 @@ void _node_key_insert(struct bptr *self, struct bptr_node *node,
 {
    uint_fast32_t idx_plus1 = idx + 1,
                  /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1 */
-                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
-                                       self->node_boundry.brch.up) - 1;
+                 ed = (node->is_leaf ? self->node_bound.leaf.up :
+                                       self->node_bound.brch.up) - 1;
    char *tar_p = (char*)node->keys + idx * self->key_size;
 
    // insert idx is not last element
@@ -446,8 +446,8 @@ void _node_val_insert(struct bptr *self, struct bptr_node *node,
    uint_fast32_t idx_plus1 = idx + 1,
                  /* up is max_SIZE + 1; max_INDEX is max_SIZE - 1
                   * leaf: val_cnt == key_cnt; branch: val_cnt == key_cnt + 1 */
-                 ed = (node->is_leaf ? self->node_boundry.leaf.up :
-                                       self->node_boundry.brch.up + 1) - 1;
+                 ed = (node->is_leaf ? self->node_bound.leaf.up :
+                                       self->node_bound.brch.up + 1) - 1;
    uint_fast16_t val_sz = _node_val_size(self, node);
    char *tar_p = (char*)node->vals + idx * val_sz;
 

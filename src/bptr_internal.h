@@ -64,10 +64,10 @@ struct bptr
    struct
     {
       struct _bptr_node_boundry
-       { uint_fast16_t low, up; }
+       { uint_fast32_t low, up; }
       leaf, brch;
     }
-   node_boundry;
+   node_bound;
 
    /* データ型 */
    uint_fast16_t key_size;

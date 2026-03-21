@@ -40,13 +40,13 @@ int bptr_dump_handler(const struct bptr *this, FILE *stream)
    fprintf(stream, "  root_pointer:        %" PRIuFAST64 "\n", this->root_idx);
    fprintf(stream, "  node_size:           %" PRIuFAST32 " bytes\n", this->node_size);
    fprintf(stream, "  node_boundry.leaf:\n");
-   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_boundry.leaf.low);
-   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_boundry.leaf.up);
-   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_boundry.leaf.t_value);
+   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_bound.leaf.low);
+   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_bound.leaf.up);
+   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_bound.leaf.t_value);
    fprintf(stream, "  node_boundry.internal:\n");
-   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_boundry.brch.low);
-   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_boundry.brch.up);
-   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_boundry.brch.t_value);
+   fprintf(stream, "    low:               %" PRIuFAST16 "\n", this->node_bound.brch.low);
+   fprintf(stream, "    up:                %" PRIuFAST16 "\n", this->node_bound.brch.up);
+   fprintf(stream, "    t_value:           %" PRIuFAST16 "\n", this->node_bound.brch.t_value);
    fprintf(stream, "\n");
 
    /* Data Type Information */

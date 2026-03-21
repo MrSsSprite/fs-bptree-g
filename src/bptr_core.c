@@ -20,22 +20,22 @@ struct node_idx_pair
 
 
 /*------------------------------ Private Macros ------------------------------*/
-#define _bptr_boundry_set(self) do \
+#define _bptr_bound_set(self) do \
 {  /* t >= (rem_sz / kv_sz + 1) / 2 */ \
    uint_fast32_t rem_sz = (self)->node_size - BPTR_NODE_METADATA_BYTE; \
-   (self)->node_boundry.brch.up = \
+   (self)->node_bound.brch.up = \
       (rem_sz - BPTR_PTR_SIZE) / ((self)->key_size + BPTR_PTR_SIZE) + 1; \
-   if ((self)->node_boundry.brch.up < 3) \
+   if ((self)->node_bound.brch.up < 3) \
     { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
-   (self)->node_boundry.brch.low = CEIL_DIV((self)->node_boundry.brch.up, 2) - 2; \
+   (self)->node_bound.brch.low = CEIL_DIV((self)->node_bound.brch.up, 2) - 2; \
    /* should be B/(K + V) + 1; +1 is detained so that B/(K+V) can be used for \
     * temporary storage. \
     */ \
-   (self)->node_boundry.leaf.up = rem_sz / ((self)->key_size + (self)->value_size); \
-   if ((self)->node_boundry.leaf.up < 1) \
+   (self)->node_bound.leaf.up = rem_sz / ((self)->key_size + (self)->value_size); \
+   if ((self)->node_bound.leaf.up < 1) \
     { bptr_errno = -1; goto INVALID_FANOUT_ERR; } \
-   (self)->node_boundry.leaf.low = CEIL_DIV((self)->node_boundry.leaf.up, 2) - 1; \
-   (self)->node_boundry.leaf.up += 1; \
+   (self)->node_bound.leaf.low = CEIL_DIV((self)->node_bound.leaf.up, 2) - 1; \
+   (self)->node_bound.leaf.up += 1; \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
 
@@ -81,7 +81,7 @@ struct bptr *bptr_init
    self->node_size = node_size;
    self->key_size = key_size;
    self->value_size = value_size;
-   _bptr_boundry_set(self);
+   _bptr_bound_set(self);
    self->record_cnt = 0;
    self->node_cnt = 0;
    self->height = 0;
@@ -115,7 +115,7 @@ struct bptr *bptr_load(const char *filename)
       bptr_errno = 1;
       goto FLOAD_ERR;
     }
-   _bptr_boundry_set(self);
+   _bptr_bound_set(self);
 
    return self;
 
