@@ -237,7 +237,8 @@ struct bptr_node *bptr_node_new
       if (parent_node == NULL)
        { bptr_errno = 2; goto LOAD_PARENT_ERR; }
       node->level = parent_node->level + 1;
-      bptr_node_unload(self, parent_node);
+      if (bptr_node_unload(self, parent_node))
+       { bptr_errno = 200; goto LOAD_PARENT_ERR; }
     }
    else
       node->level = 0;
