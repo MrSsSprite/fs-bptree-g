@@ -612,29 +612,28 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       memcpy(new_n->vals,
              (char*)node->vals + node->key_count * _node_val_size(self, node),
              self->value_size * new_n->key_count);
-      if (has_new_parent)
-       {
-         _node_key_insert(self, parent_n, new_n->keys, 0);
-         if (self->is_lite)
-          {
-            BPTR_LITE_PTR_TYPE new_n_idx = new_n->node_idx;
-            _node_val_insert(self, parent_n, &new_n_idx, 1);
-          }
-         else
-          {
-            BPTR_NORM_PTR_TYPE new_n_idx = new_n->node_idx;
-            _node_val_insert(self, parent_n, &new_n_idx, 1);
-          }
-         parent_n->key_count++;
-       }
-      else
-       {
-         // TODO: search for key of orig node in parent
-       }
     }
    else
     {
     }
+   // search for key of orig node (aka first node) in parent
+   // could be not-found if the key is further promoted upward
+   uint32_t idx = _node_key_search(self, parent_n, node->keys);
+   // not found => take place of low bound; found => right-of orig node key
+   // ^bptr==-1         ^idx                ^bptr==0 ^idx+1
+   if (bptr_errno == 0) idx++;
+   _node_key_insert(self, parent_n, new_n->keys, idx);
+   if (self->is_lite)
+    {
+      BPTR_LITE_PTR_TYPE new_n_idx = new_n->node_idx;
+      _node_val_insert(self, parent_n, &new_n_idx, idx + 1);
+    }
+   else
+    {
+      BPTR_NORM_PTR_TYPE new_n_idx = new_n->node_idx;
+      _node_val_insert(self, parent_n, &new_n_idx, idx + 1);
+    }
+   parent_n->key_count++;
 
    // TODO: edge case: update self->root if the node being split is root
 
