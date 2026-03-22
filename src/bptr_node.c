@@ -566,6 +566,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    if (node->key_count != max_sz)
     { bptr_errno = -1; goto NODE_NOT_FULL_ERR; }
 
+   /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
    if (node->parent == 0)
     {
       parent_n = bptr_node_new(self, 0, 0);
@@ -596,16 +597,20 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
           }
       goto PAR_N_MALLOC_ERR;
     }
+   // TODO: split parent node if it's already full
+   /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
 
+   /*{-------------------- Pre-work: Init new empty node ---------------------*/
    new_n = bptr_node_new(self, 1, node->parent);
    if (new_n == NULL) { bptr_errno = 200; goto NEW_N_MALLOC_ERR; };
+   /*}-------------------- Pre-work: Init new empty node ---------------------*/
 
+   /*{------------------------ Main-Work: Split node -------------------------*/
    if (node->is_leaf)
     {
       // new node gets up_bound / 2 keys; orig node retains other
       new_n->key_count = self->node_boundry.leaf.up / 2;
       node->key_count = max_sz - new_n->key_count;
-
       memcpy(new_n->keys,
              (char*)node->keys + node->key_count * self->key_size,
              self->key_size * new_n->key_count);
@@ -616,6 +621,9 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    else
     {
     }
+   /*}------------------------ Main-Work: Split node -------------------------*/
+
+   /*{-------------------- Post-Work: Update Parent Node ---------------------*/
    // search for key of orig node (aka first node) in parent
    // could be not-found if the key is further promoted upward
    uint32_t idx = _node_key_search(self, parent_n, node->keys);
@@ -634,6 +642,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       _node_val_insert(self, parent_n, &new_n_idx, idx + 1);
     }
    parent_n->key_count++;
+   /*}-------------------- Post-Work: Update Parent Node ---------------------*/
 
    // TODO: edge case: update self->root if the node being split is root
 
