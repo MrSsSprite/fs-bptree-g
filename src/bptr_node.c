@@ -461,6 +461,23 @@ void _node_val_insert(struct bptr *self, struct bptr_node *node,
 }
 
 
+static inline
+void _node_child_insert(struct bptr *self, struct bptr_node *parent_n,
+                        bptr_node_t child_ptr, uint_fast32_t idx)
+{
+   if (self->is_lite)
+    {
+      BPTR_LITE_PTR_TYPE n_idx = child_ptr;
+      _node_val_insert(self, parent_n, &n_idx, idx);
+    }
+   else
+    {
+      BPTR_NORM_PTR_TYPE n_idx = child_ptr;
+      _node_val_insert(self, parent_n, &n_idx, idx);
+    }
+}
+
+
 
 static inline
 void _node_key_erase(struct bptr *self, struct bptr_node *node,
