@@ -559,8 +559,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 {
    struct bptr_node *new_n, *parent_n;
    _Bool has_new_parent;
-   uint_fast32_t max_sz = (node->is_leaf ? self->node_boundry.leaf.up :
-                                           self->node_boundry.brch.up) - 1,
+   uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
+                                           self->node_bound.brch.up) - 1,
                  new_elem_idx;
 
    // Check full; error if not already full
@@ -583,7 +583,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          case BPTR_E_OOM:
          case 2:
             break;
-         default:          bptr_errno = BPTR_E_UNREACHABLE; break;
+         default:
+            bptr_errno = BPTR_E_UNREACHABLE; break;
           }
       goto PAR_N_MALLOC_ERR;
       has_new_parent = 1;
@@ -604,7 +605,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
           }
       goto PAR_N_MALLOC_ERR;
     }
-   // TODO: split parent node if it's already full
    /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
 
    /*{-------------------- Pre-work: Init new empty node ---------------------*/
@@ -616,47 +616,93 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    if (node->is_leaf)
     {
       // new node gets up_bound / 2 keys; orig node retains other
-      new_n->key_count = self->node_boundry.leaf.up / 2;
-      node->key_count = max_sz - new_n->key_count;
-      memcpy(new_n->keys,
-             (char*)node->keys + node->key_count * self->key_size,
-             self->key_size * new_n->key_count);
-      memcpy(new_n->vals,
-             (char*)node->vals + node->key_count * _node_val_size(self, node),
-             self->value_size * new_n->key_count);
+      new_n->key_count = self->node_bound.leaf.up / 2;
+      // total # of elem == up because one new elem is adding in
+      node->key_count = self->node_bound.leaf.up - new_n->key_count;
+
+      // move elems to new node
+      // because is_leaf, symmetric structure on keys & vals
+      if (new_elem_idx < node->key_count)
+       {
+         // src_st = orig_n->key_cnt - 1
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * (node->key_count - 1),
+                self->key_size * new_n->key_count);
+         memcpy(new_n->vals,
+                (char*)node->vals + self->value_size * (node->key_count - 1),
+                self->value_size * new_n->key_count);
+
+         node->key_count--;
+         _node_key_insert(self, node, key, new_elem_idx);
+         _node_val_insert(self, node, val, new_elem_idx);
+         node->key_count++;
+       }
+      else  // new elem in right part
+       {
+         uint_fast32_t cnt = new_elem_idx - node->key_count;
+         // before new elem
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * node->key_count,
+                self->key_size * cnt);
+         memcpy(new_n->vals,
+                (char*)node->vals + self->value_size * node->key_count,
+                self->value_size * cnt);
+         // new elem
+         memcpy((char*)new_n->keys + self->key_size * cnt,
+                key, self->key_size);
+         memcpy((char*)new_n->vals + self->value_size * cnt,
+                val, self->value_size);
+         cnt++;
+         // after new elem
+         memcpy((char*)new_n->keys + self->key_size * cnt,
+                (char*)node->keys + self->key_size * new_elem_idx,
+                self->key_size * (max_sz - new_elem_idx));
+         memcpy((char*)new_n->vals + self->value_size * cnt,
+                (char*)node->vals + self->value_size * new_elem_idx,
+                self->value_size * (max_sz - new_elem_idx));
+       }
+
+      // TODO: update prev, next
+
+      // Update parent
+      if (parent_n->key_count == self->node_bound.brch.up - 1)
+       { // Split parent if it's already full
+         if (self->is_lite)
+          {
+            BPTR_LITE_PTR_TYPE n_idx = new_n->node_idx;
+            // TODO: split error handling
+            bptr_node_split(self, parent_n, new_n->keys, &n_idx);
+          }
+         else
+          {
+            BPTR_NORM_PTR_TYPE n_idx = new_n->node_idx;
+            // TODO: split error handling
+            bptr_node_split(self, parent_n, new_n->keys, &n_idx);
+          }
+       }
+      else
+       {
+         uint32_t idx = _node_key_search(self, parent_n, new_n->keys);
+         _node_key_insert(self, parent_n, new_n->keys, idx);
+         _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
+         parent_n->key_count++;
+       }
     }
    else
-    {
+    { // TODO: handle node==branch case
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
-   /*{-------------------- Post-Work: Update Parent Node ---------------------*/
-   // search for key of orig node (aka first node) in parent
-   // could be not-found if the key is further promoted upward
-   uint32_t idx = _node_key_search(self, parent_n, node->keys);
-   // not found => take place of low bound; found => right-of orig node key
-   // ^bptr==-1         ^idx                ^bptr==0 ^idx+1
-   if (bptr_errno == 0) idx++;
-   _node_key_insert(self, parent_n, new_n->keys, idx);
-   if (self->is_lite)
-    {
-      BPTR_LITE_PTR_TYPE new_n_idx = new_n->node_idx;
-      _node_val_insert(self, parent_n, &new_n_idx, idx + 1);
-    }
-   else
-    {
-      BPTR_NORM_PTR_TYPE new_n_idx = new_n->node_idx;
-      _node_val_insert(self, parent_n, &new_n_idx, idx + 1);
-    }
-   parent_n->key_count++;
-   /*}-------------------- Post-Work: Update Parent Node ---------------------*/
-
    // TODO: edge case: update self->root if the node being split is root
 
+KV_EXIST_ERR:
 // Error Handling Zone
    bptr_node_free(new_n);
 NEW_N_MALLOC_ERR:
-   if (has_new_parent) bptr_node_free(parent_n);
+   if (has_new_parent)
+      /* TODO: destroy new node created */;
+   else
+      bptr_node_unload(self, parent_n);
 PAR_N_MALLOC_ERR:
 NODE_NOT_FULL_ERR:
    return 0;
