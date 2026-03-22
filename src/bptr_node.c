@@ -560,11 +560,18 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    struct bptr_node *new_n, *parent_n;
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_boundry.leaf.up :
-                                           self->node_boundry.brch.up) - 1;
+                                           self->node_boundry.brch.up) - 1,
+                 new_elem_idx;
 
    // Check full; error if not already full
    if (node->key_count != max_sz)
     { bptr_errno = -1; goto NODE_NOT_FULL_ERR; }
+
+   /*{--------------- Pre-Work: Find low bound of new element ----------------*/
+   new_elem_idx = _node_key_search(self, node, key);
+   // newly inserted element should not match with another existing element
+   if (bptr_errno == 0) return -100;
+   /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
    /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
    if (node->parent == 0)
