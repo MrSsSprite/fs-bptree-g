@@ -662,7 +662,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 self->value_size * (max_sz - new_elem_idx));
        }
 
-      // TODO: update prev, next
+      // update prev, next
+      new_n->next = node->next;
+      new_n->prev = node->node_idx;
+      node->next = new_n->node_idx;
 
       // Update parent
       if (parent_n->key_count == self->node_bound.brch.up - 1)
