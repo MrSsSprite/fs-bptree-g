@@ -220,6 +220,28 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
 static inline
 uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
                           const void *key);
+/**
+ * @brief   Promote a key-node(reference) pair into a parent node
+ *
+ * Inserts the promoted key and child pointer of @p prm_n into @p par_n .
+ * If @p par_n is already full, a recursive split is triggered via
+ * @c bptr_node_split .
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] par_n parent node to receive the promoted key and child.
+ * @param[in]     prm_n node being promoted into @p par_n .
+ * @param[in]     key   key to promote.
+ *
+ * @return  error code
+ * @retval  0     success
+ * @retval  200   parent node was full and split failed
+ *
+ * @remark  If @p prm_n is a branch node, @p key is ignored and
+ *          @c prm_n->keys[0] is used as the promoted key instead.
+ */
+static inline
+int _node_promote(struct bptr *self, struct bptr_node *par_n,
+                  struct bptr_node *prm_n, const void *key);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -708,6 +730,39 @@ NEW_N_MALLOC_ERR:
       bptr_node_unload(self, parent_n);
 PAR_N_MALLOC_ERR:
 NODE_NOT_FULL_ERR:
+   return 0;
+}
+
+
+static inline
+int _node_promote(struct bptr *self, struct bptr_node *par_n,
+                  struct bptr_node *prm_n, const void *key)
+{
+   if (!prm_n->is_leaf) key = prm_n->keys;
+
+   if (par_n->key_count == self->node_bound.brch.up - 1)
+    {
+#define _node_prm_split_par(type) do \
+{ \
+   type n_idx = prm_n->node_idx; \
+   if (bptr_node_split(self, par_n, key, &n_idx) == 0) return 200; \
+} while (0)
+
+      if (self->is_lite)
+         _node_prm_split_par(BPTR_LITE_PTR_TYPE);
+      else
+         _node_prm_split_par(BPTR_NORM_PTR_TYPE);
+
+#undef _node_prm_split_par
+    }
+   else
+    {
+      // find insertion point
+      uint32_t idx = _node_key_search(self, par_n, key);
+      _node_key_insert(self, par_n, key, idx);
+      _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
+      par_n->key_count++;
+    }
    return 0;
 }
 /*-------------------------- Private Functions END ---------------------------*/
