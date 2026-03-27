@@ -4,3 +4,7 @@
 - [ ] feat: implement `bptr_node_split`
 - [ ] feat: implement `bptr_insert`
 - [ ] fix: flush tree metadata on destroy
+
+## Split
+- [ ] complete error handling process
+- [ ] write promote
