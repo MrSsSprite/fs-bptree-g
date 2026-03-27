@@ -693,6 +693,17 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     }
    else
     { // TODO: handle node==branch case
+      uint_fast32_t idx;
+
+      node->key_count = self->node_bound.brch.up / 2;
+      new_n->key_count = self->node_bound.brch.up - node->key_count - 1;
+
+      if (new_elem_idx < node->key_count)
+       {
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * node->key_count,
+                self->key_size * new_n->key_count);
+       }
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
