@@ -741,6 +741,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          _node_val_insert(self, node, val, new_elem_idx + 1);
          node->key_count++;
        }
+      else if (new_elem_idx > node->key_count)
+         /* TODO */;
+      else
+         /* TODO */;
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
