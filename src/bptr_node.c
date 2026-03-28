@@ -715,7 +715,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     }
    else
     { // TODO: handle node==branch case
-      uint_fast32_t idx;
 
       node->key_count = self->node_bound.brch.up / 2;
       new_n->key_count = self->node_bound.brch.up - node->key_count - 1;
@@ -725,6 +724,22 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          memcpy(new_n->keys,
                 (char*)node->keys + self->key_size * node->key_count,
                 self->key_size * new_n->key_count);
+         // cp (up - new_val_cnt), nvc
+         // nvc = new_key_cnt + 1 = (up - old_key_cnt - 1) + 1 = up - okc
+         // => okc = up - nvc
+         // cp okc, nvc
+         memcpy(new_n->vals,
+                (char*)node->vals + self->value_size * node->key_count,
+                new_n->key_count + 1);
+
+         if (_node_promote(self, parent_n, new_n,
+                           (char*)node->keys + node->key_count - 1))
+            return 200;
+
+         node->key_count--;
+         _node_key_insert(self, node, key, new_elem_idx);
+         _node_val_insert(self, node, val, new_elem_idx + 1);
+         node->key_count++;
        }
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
