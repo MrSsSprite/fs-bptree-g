@@ -729,7 +729,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
          if (_node_promote(self, parent_n, new_n,
                            (char*)node->keys + node->key_count - 1))
-            return 200;
+            return BPTR_E_UNREACHABLE;    // TODO: err handle
 
          node->key_count--;
          _node_key_insert(self, node, key, new_elem_idx);
