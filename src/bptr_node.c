@@ -742,7 +742,48 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          node->key_count++;
        }
       else if (new_elem_idx > node->key_count)
-         /* TODO */;
+       {
+         char *kdst = new_n->keys, *vdst = new_n->vals;
+         size_t cnt, cnt_b, offset, offset_b;
+
+         if (_node_promote(self, parent_n,
+                           new_n, (char*)node->keys + node->key_count))
+            return BPTR_E_UNREACHABLE;    // TODO: err handle
+
+         // Before new elem
+         offset = node->key_count + 1;
+         cnt = new_elem_idx - offset;
+         offset_b = offset * self->key_size;
+         cnt_b = cnt * self->key_size;
+         memcpy(kdst, (char*)node->keys + offset_b, cnt_b);
+         kdst += cnt_b;
+         // offset unchanged as keys has prm as buffer
+         offset_b = offset * self->value_size;
+         // cnt_val = (nei + 1) - (okc + 1) = cnt_key + 1
+         cnt_b = ++cnt * self->value_size;
+         memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
+         vdst += cnt_b;
+
+         // New elem
+         memcpy(kdst, key, self->key_size);
+         kdst += self->key_size;
+         memcpy(vdst, val, self->value_size);
+         vdst += self->value_size;
+
+         // After new elem
+         offset = new_elem_idx;
+         cnt = max_sz - offset;
+         offset_b = offset * self->key_size;
+         cnt_b = cnt * self->key_size;
+         memcpy(kdst, (char*)node->keys + offset_b, cnt_b);
+         // nei_v = nei_k + 1
+         offset = new_elem_idx + 1;
+         // cnt_v = mx_v - offset = (mx_k + 1) - (nei_k + 1) = mx - nei
+         cnt = max_sz - new_elem_idx;
+         offset_b = offset * self->value_size;
+         cnt_b = cnt * self->value_size;
+         memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
+       }
       else
          /* TODO */;
     }
