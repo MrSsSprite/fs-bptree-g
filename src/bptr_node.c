@@ -649,10 +649,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          // src_st = orig_n->key_cnt - 1
          memcpy(new_n->keys,
                 (char*)node->keys + self->key_size * (node->key_count - 1),
-                self->key_size * new_n->key_count);
+                (size_t)self->key_size * new_n->key_count);
          memcpy(new_n->vals,
                 (char*)node->vals + self->value_size * (node->key_count - 1),
-                self->value_size * new_n->key_count);
+                (size_t)self->value_size * new_n->key_count);
 
          node->key_count--;
          _node_key_insert(self, node, key, new_elem_idx);
@@ -665,10 +665,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          // before new elem
          memcpy(new_n->keys,
                 (char*)node->keys + self->key_size * node->key_count,
-                self->key_size * cnt);
+                (size_t)self->key_size * cnt);
          memcpy(new_n->vals,
                 (char*)node->vals + self->value_size * node->key_count,
-                self->value_size * cnt);
+                (size_t)self->value_size * cnt);
          // new elem
          memcpy((char*)new_n->keys + self->key_size * cnt,
                 key, self->key_size);
@@ -678,10 +678,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          // after new elem
          memcpy((char*)new_n->keys + self->key_size * cnt,
                 (char*)node->keys + self->key_size * new_elem_idx,
-                self->key_size * (max_sz - new_elem_idx));
+                (size_t)self->key_size * (max_sz - new_elem_idx));
          memcpy((char*)new_n->vals + self->value_size * cnt,
                 (char*)node->vals + self->value_size * new_elem_idx,
-                self->value_size * (max_sz - new_elem_idx));
+                (size_t)self->value_size * (max_sz - new_elem_idx));
        }
 
       // update prev, next
@@ -723,7 +723,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        {
          memcpy(new_n->keys,
                 (char*)node->keys + self->key_size * node->key_count,
-                self->key_size * new_n->key_count);
+                (size_t)self->key_size * new_n->key_count);
          // cp (up - new_val_cnt), nvc
          // nvc = new_key_cnt + 1 = (up - old_key_cnt - 1) + 1 = up - okc
          // => okc = up - nvc
