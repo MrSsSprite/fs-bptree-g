@@ -684,11 +684,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (size_t)self->value_size * (max_sz - new_elem_idx));
        }
 
-      // update prev, next
-      new_n->next = node->next;
-      new_n->prev = node->node_idx;
-      node->next = new_n->node_idx;
-
       // Update parent
       if (parent_n->key_count == self->node_bound.brch.up - 1)
        { // Split parent if it's already full
@@ -788,6 +783,13 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          /* TODO */;
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
+
+   /*{-------------------- Post-Work: Update prev, next ----------------------*/
+   new_n->next = node->next;
+   new_n->prev = node->node_idx;
+   node->next = new_n->node_idx;
+   // TODO: update new_n->next->prev
+   /*}-------------------- Post-Work: Update prev, next ----------------------*/
 
    // TODO: edge case: update self->root if the node being split is root
 
