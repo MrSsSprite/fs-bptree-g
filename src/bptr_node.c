@@ -730,7 +730,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          // cp okc, nvc
          memcpy(new_n->vals,
                 (char*)node->vals + self->value_size * node->key_count,
-                new_n->key_count + 1);
+                (size_t)self->value_size * (new_n->key_count + 1));
 
          if (_node_promote(self, parent_n, new_n,
                            (char*)node->keys + node->key_count - 1))
