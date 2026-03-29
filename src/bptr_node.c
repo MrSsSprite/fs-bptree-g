@@ -780,7 +780,19 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
        }
       else
-         /* TODO */;
+       { // new_elem_idx == okc
+         _node_promote(self, parent_n, new_n, key);
+
+         memcpy(new_n->keys,
+                (char*)node->keys + new_elem_idx * self->key_size,
+                (size_t)self->key_size * new_n->key_count);
+
+         memcpy(new_n->vals, val, self->value_size);
+         // nei_v = nei_k + 1
+         memcpy((char*)new_n->vals + self->value_size,
+                (char*)node->vals + (new_elem_idx + 1) * self->value_size,
+                (size_t)self->value_size * new_n->key_count);
+       }
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
