@@ -7,4 +7,5 @@
 
 ## Split
 - [ ] complete error handling process
+    - [ ] implement node destroy function for error handling proc
 - [ ] write promote
