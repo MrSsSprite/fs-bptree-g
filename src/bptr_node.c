@@ -587,12 +587,12 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
    // Check full; error if not already full
    if (node->key_count != max_sz)
-    { bptr_errno = -1; goto NODE_NOT_FULL_ERR; }
+    { bptr_errno = -1; goto PRE_WORK_ERR; }
 
    /*{--------------- Pre-Work: Find low bound of new element ----------------*/
    new_elem_idx = _node_key_search(self, node, key);
    // newly inserted element should not match with another existing element
-   if (bptr_errno == 0) return -100;
+   if (bptr_errno == 0) { bptr_errno = -2; goto PRE_WORK_ERR; }
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
    /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
@@ -600,6 +600,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     {
       parent_n = bptr_node_new(self, 0, 0);
       if (parent_n == NULL)
+       {
          switch (bptr_errno)
           {
          case BPTR_E_OOM:
@@ -608,7 +609,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          default:
             bptr_errno = BPTR_E_UNREACHABLE; break;
           }
-      goto PAR_N_MALLOC_ERR;
+         goto PRE_WORK_ERR;
+       }
       has_new_parent = 1;
       // add orig. node into parent_n->vals in advance
       _node_val_insert(self, parent_n, node, 0);
@@ -618,20 +620,23 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       has_new_parent = 0;
       parent_n = bptr_node_load(self, node->parent);
       if (parent_n == NULL)
+       {
          switch (bptr_errno)
           {
-         case BPTR_E_OOM:
+         case BPTR_E_OOM:  break;
          case -1:
-            break;
-         default:          bptr_errno = BPTR_E_UNREACHABLE; break;
+            bptr_errno = 200; break;
+         default:
+            bptr_errno = BPTR_E_UNREACHABLE; break;
           }
-      goto PAR_N_MALLOC_ERR;
+         goto PRE_WORK_ERR;
+       }
     }
    /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
 
    /*{-------------------- Pre-work: Init new empty node ---------------------*/
    new_n = bptr_node_new(self, 1, node->parent);
-   if (new_n == NULL) { bptr_errno = 200; goto NEW_N_MALLOC_ERR; };
+   if (new_n == NULL) { bptr_errno = 201; goto NEW_N_MALLOC_ERR; };
    /*}-------------------- Pre-work: Init new empty node ---------------------*/
 
    /*{------------------------ Main-Work: Split node -------------------------*/
@@ -813,8 +818,7 @@ NEW_N_MALLOC_ERR:
       /* TODO: destroy new node created */;
    else
       bptr_node_unload(self, parent_n);
-PAR_N_MALLOC_ERR:
-NODE_NOT_FULL_ERR:
+PRE_WORK_ERR:
    return 0;
 }
 
