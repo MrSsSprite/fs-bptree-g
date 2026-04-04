@@ -584,6 +584,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
                                            self->node_bound.brch.up) - 1,
                  new_elem_idx;
+   bptr_node_t ret;
 
    // Check full; error if not already full
    if (node->key_count != max_sz)
@@ -807,8 +808,16 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    node->next = new_n->node_idx;
    // TODO: update new_n->next->prev
    /*}-------------------- Post-Work: Update prev, next ----------------------*/
+   // edge case: update self->root if the node being split is root
+   if (self->root_idx == node->node_idx)
+      self->root_idx = parent_n->node_idx;
 
-   // TODO: edge case: update self->root if the node being split is root
+   if (bptr_node_unload(self, parent_n))
+    { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
+   ret = new_n->node_idx;
+   if (bptr_node_unload(self, new_n))
+    { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
+   return ret;
 
 KV_EXIST_ERR:
 // Error Handling Zone
