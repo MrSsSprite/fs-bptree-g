@@ -645,7 +645,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          default:
             bptr_errno = BPTR_E_UNREACHABLE; break;
           }
-         goto PRE_WORK_ERR;
+         goto PAR_N_LOAD_ERR;
        }
       has_new_parent = 1;
       // add orig. node into parent_n->vals in advance
@@ -665,7 +665,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          default:
             bptr_errno = BPTR_E_UNREACHABLE; break;
           }
-         goto PRE_WORK_ERR;
+         goto PAR_N_LOAD_ERR;
        }
     }
    /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
@@ -726,14 +726,15 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          if (self->is_lite)
           {
             BPTR_LITE_PTR_TYPE n_idx = new_n->node_idx;
-            // TODO: split error handling
-            bptr_node_split(self, parent_n, new_n->keys, &n_idx);
+            if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
+             { bptr_errno = 202; goto PAR_SPLIT_ERR; }
           }
          else
           {
             BPTR_NORM_PTR_TYPE n_idx = new_n->node_idx;
             // TODO: split error handling
-            bptr_node_split(self, parent_n, new_n->keys, &n_idx);
+            if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
+             { bptr_errno = 202; goto PAR_SPLIT_ERR; }
           }
        }
       else
@@ -745,8 +746,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
     }
    else
-    { // TODO: handle node==branch case
-
+    {
       node->key_count = self->node_bound.brch.up / 2;
       new_n->key_count = self->node_bound.brch.up - node->key_count - 1;
 
@@ -765,7 +765,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
          if (_node_promote(self, parent_n, new_n,
                            (char*)node->keys + node->key_count - 1))
-            return BPTR_E_UNREACHABLE;    // TODO: err handle
+          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
 
          node->key_count--;
          _node_key_insert(self, node, key, new_elem_idx);
@@ -779,7 +779,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
          if (_node_promote(self, parent_n,
                            new_n, (char*)node->keys + node->key_count))
-            return BPTR_E_UNREACHABLE;    // TODO: err handle
+          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
 
          // Before new elem
          offset = node->key_count + 1;
@@ -817,7 +817,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
       else
        { // new_elem_idx == okc
-         _node_promote(self, parent_n, new_n, key);
+         if (_node_promote(self, parent_n, new_n, key))
+          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
 
          memcpy(new_n->keys,
                 (char*)node->keys + new_elem_idx * self->key_size,
@@ -843,14 +844,21 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
    return ret;
 
-KV_EXIST_ERR:
-// Error Handling Zone
+/*--------------------------- Error Handling Zone ----------------------------*/
+// TODO: restore back to the state before fn call on error
+FINISH_TOUCH_ERR:
+PAR_SPLIT_ERR:
+   if (has_new_parent)
+      // TODO: release file space preallocated
+      bptr_node_free(parent_n);
+   else
+      // TODO: undo modifications on parent
+      bptr_node_unload(self, parent_n);
+PAR_N_LOAD_ERR:
+NEXT_N_UPDATE_ERROR:
+   // TODO: release file space preallocated
    bptr_node_free(new_n);
 NEW_N_MALLOC_ERR:
-   if (has_new_parent)
-      /* TODO: destroy new node created */;
-   else
-      bptr_node_unload(self, parent_n);
 PRE_WORK_ERR:
    return 0;
 }
