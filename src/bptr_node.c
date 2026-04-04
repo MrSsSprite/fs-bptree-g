@@ -596,6 +596,41 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    if (bptr_errno == 0) { bptr_errno = -2; goto PRE_WORK_ERR; }
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
+   /*{-------------------- Pre-work: Init new empty node ---------------------*/
+   new_n = bptr_node_new(self, 1, node->parent);
+   if (new_n == NULL) { bptr_errno = 201; goto NEW_N_MALLOC_ERR; };
+   /*}-------------------- Pre-work: Init new empty node ---------------------*/
+
+   /*{--------------------- Pre-Work: Update prev, next ----------------------*/
+   // update new_n->next->prev
+   struct bptr_node *next_n = bptr_node_load(self, node->next);
+   if (next_n == NULL)
+    {
+      switch (bptr_errno)
+       {
+      case BPTR_E_OOM:  break;
+      case -1:
+         bptr_errno = 200; break;
+      default:
+         bptr_errno = BPTR_E_UNREACHABLE; break;
+       }
+      goto NEXT_N_UPDATE_ERROR;
+    }
+   next_n->prev = new_n->node_idx;
+   next_n->is_dirty = 1;
+   if (bptr_node_unload(self, next_n))
+    {
+      bptr_node_free(next_n);
+      bptr_errno = 200; goto NEXT_N_UPDATE_ERROR;
+    }
+
+   new_n->next = node->next;
+   new_n->is_dirty = 1;
+   new_n->prev = node->node_idx;
+   node->next = new_n->node_idx;
+   node->is_dirty = 1;
+   /*}--------------------- Pre-Work: Update prev, next ----------------------*/
+
    /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
    if (node->parent == 0)
     {
@@ -634,11 +669,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
     }
    /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
-
-   /*{-------------------- Pre-work: Init new empty node ---------------------*/
-   new_n = bptr_node_new(self, 1, node->parent);
-   if (new_n == NULL) { bptr_errno = 201; goto NEW_N_MALLOC_ERR; };
-   /*}-------------------- Pre-work: Init new empty node ---------------------*/
 
    /*{------------------------ Main-Work: Split node -------------------------*/
    if (node->is_leaf)
@@ -802,12 +832,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
-   /*{-------------------- Post-Work: Update prev, next ----------------------*/
-   new_n->next = node->next;
-   new_n->prev = node->node_idx;
-   node->next = new_n->node_idx;
-   // TODO: update new_n->next->prev
-   /*}-------------------- Post-Work: Update prev, next ----------------------*/
    // edge case: update self->root if the node being split is root
    if (self->root_idx == node->node_idx)
       self->root_idx = parent_n->node_idx;
