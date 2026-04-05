@@ -125,6 +125,27 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
 static inline
 bptr_node_t bptr_node_prealloc (struct bptr *self);
 /**
+ * @brief   Vacate the file space occupied by the node.
+ *
+ * This function releases the file space allocated for the node (identified by
+ * @c node->node_idx ) and returns it back to internal free list.
+ *
+ * @param[in,out] self  bptr obj. Only @c fbuf and @c free_list fields will be
+ *                      modified.
+ * @param[in]     node  node to which the file space is allocated
+ * @return  status_code
+ * @retval  0           success
+ * @retval  2           failed during io flush. @c bptr_io_flush_node sets
+ *                      @c bptr_errno
+ *
+ * @warning @c node->node_idx is @b not modified by this function. In other
+ *          words, it still ref. to released space. The caller is responsible
+ *          for nulling the index or discarding the node to prevent accidental
+ *          use of vacated space.
+ */
+static inline
+int bptr_node_vacate(struct bptr *self, struct bptr_node *node);
+/**
  * @brief   Insert a key into keys
  *
  * @param[in]     self  @c bptr object.
@@ -460,6 +481,34 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
       ret = offset / self->node_size;
     }
    return ret;
+}
+
+
+static inline
+int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
+#define _WRITE_FL_HEAD(T) do \
+{ \
+      T head = self->free_list.head; \
+      memcpy(buf_it, &head, sizeof(head)); \
+} while (0)
+{
+   uint16_t flags = 0;
+   void *buf_it = self->fbuf;
+
+   iter_write(buf_it, &flags, 2);
+
+   if (self->is_lite)
+      _WRITE_FL_HEAD(BPTR_LITE_PTR_TYPE);
+   else
+      _WRITE_FL_HEAD(BPTR_NORM_PTR_TYPE);
+#undef _WRITE_FL_HEAD
+
+   if (bptr_io_flush_node(self, node->node_idx) == 0)
+      return 2;   // bptr_io_flush_node sets bptr_errno
+
+   self->free_list.head = node->node_idx;
+   self->free_list.cnt++;
+   return 0;
 }
 
 
