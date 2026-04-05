@@ -782,7 +782,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          else
           {
             BPTR_NORM_PTR_TYPE n_idx = new_n->node_idx;
-            // TODO: split error handling
             if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
              { bptr_errno = 202; goto PAR_SPLIT_ERR; }
           }
