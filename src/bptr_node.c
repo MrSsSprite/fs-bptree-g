@@ -628,6 +628,7 @@ static
 bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val)
 {
+   // TODO: replace error codes magic # with manifest constant
    struct bptr_node *new_n, *parent_n;
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
