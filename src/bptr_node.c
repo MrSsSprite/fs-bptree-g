@@ -894,18 +894,23 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    return ret;
 
 /*--------------------------- Error Handling Zone ----------------------------*/
-// TODO: restore back to the state before fn call on error
+// restore back to the state before fn call on error
 FINISH_TOUCH_ERR:
 PAR_SPLIT_ERR:
    if (has_new_parent)
-      // TODO: release file space preallocated
+    {
+      bptr_node_vacate(self, parent_n);
       bptr_node_free(parent_n);
+    }
    else
-      // TODO: undo modifications on parent
+    {
+      // undo all modifications
+      node->key_count = max_sz;
       bptr_node_unload(self, parent_n);
+    }
 PAR_N_LOAD_ERR:
 NEXT_N_UPDATE_ERROR:
-   // TODO: release file space preallocated
+   bptr_node_vacate(self, new_n);
    bptr_node_free(new_n);
 NEW_N_MALLOC_ERR:
 PRE_WORK_ERR:
