@@ -301,7 +301,7 @@ struct bptr_node *bptr_node_new
       struct bptr_node *parent_node = bptr_node_load(self, parent);
       if (parent_node == NULL)
        { bptr_errno = 2; goto LOAD_PARENT_ERR; }
-      node->level = parent_node->level + 1;
+      node->level = parent_node->level - 1;
       if (bptr_node_unload(self, parent_node))
        { bptr_errno = 200; goto LOAD_PARENT_ERR; }
     }
@@ -429,7 +429,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 #undef _READ_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
 
-   node->is_leaf = (self->height == node->level);
+   node->is_leaf = (node->level == 0);
    node->is_dirty = 0;
    _node_kv_malloc(self, node);
    if (node->keys == NULL || node->vals == NULL)
