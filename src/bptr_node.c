@@ -884,13 +884,18 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
    // edge case: update self->root if the node being split is root
    if (self->root_idx == node->node_idx)
+    {
       self->root_idx = parent_n->node_idx;
+      self->height++;
+    }
 
    if (bptr_node_unload(self, parent_n))
     { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
    ret = new_n->node_idx;
    if (bptr_node_unload(self, new_n))
     { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
+   self->record_cnt++;
+   self->node_cnt++;
    return ret;
 
 /*--------------------------- Error Handling Zone ----------------------------*/
