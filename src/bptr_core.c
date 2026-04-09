@@ -60,7 +60,7 @@ struct bptr *bptr_init
    uint16_t key_size,
    uint16_t value_size,
    int (*compare)(const void *lhs, const void *rhs)
-   )
+)
 {
    struct bptr *self;
 
