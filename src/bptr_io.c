@@ -36,7 +36,7 @@
 int bptr_io_fcreat(struct bptr *self, const char *filename)
 {
    int err_code;
-   void *memit;
+   char *memit;
 
    /* Create file */
    self->file = fopen(filename, "wbx+");
