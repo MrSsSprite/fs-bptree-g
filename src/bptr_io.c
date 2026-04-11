@@ -64,9 +64,9 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    memit += 4;
 
    *(uint16_t*)memit = self->key_size;
-   memit += 1;
+   memit += 2;
    *(uint16_t*)memit = self->value_size;
-   memit += 3; // +1 for padding
+   memit += 2;
 
    *(uint64_t*)memit = self->record_cnt;
    memit += 8;
