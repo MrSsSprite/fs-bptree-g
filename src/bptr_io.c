@@ -32,6 +32,12 @@
 /*---------------------------- Private Macros END ----------------------------*/
 
 
+/*{---------------------- Private Function Declaration -----------------------*/
+static inline
+void bptr_header_marshal(struct bptr *self);
+/*}---------------------- Private Function Declaration -----------------------*/
+
+
 /*----------------------------- Public Functions -----------------------------*/
 int bptr_io_fcreat(struct bptr *self, const char *filename)
 {
@@ -275,3 +281,36 @@ while (0)
    return pos;
 }
 /*--------------------------- Public Functions END ---------------------------*/
+
+/*{--------------------------- Private Functions -----------------------------*/
+// Serialize bptr header info into self->fbuf
+static inline
+void bptr_header_marshal(struct bptr *self)
+{
+   char *memit = self->fbuf;
+
+   strncpy(memit, BPTR_MAGIC_STR, 4);
+   memit += 4;
+   *(uint32_t*)memit = (self->is_lite) ?
+                       0x80 | BPTR_CURRENT_VERSION : BPTR_CURRENT_VERSION;
+   memit += 4;
+   *(uint32_t*)memit = self->node_size;
+   memit += 4;
+
+   *(uint16_t*)memit = self->key_size;
+   memit += 2;
+   *(uint16_t*)memit = self->value_size;
+   memit += 2; // +1 for padding
+
+   *(uint64_t*)memit = self->record_cnt;
+   memit += 8;
+   *(uint32_t*)memit = self->height;
+   memit += 4;
+   if (self->is_lite)
+      _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
+                                       BPTR_LITE_PTR_BYTE);
+   else
+      _bptr_fcreat_write_uptr_metadata(BPTR_NORM_PTR_TYPE,
+                                       BPTR_NORM_PTR_BYTE);
+}
+/*}--------------------------- Private Functions -----------------------------*/
