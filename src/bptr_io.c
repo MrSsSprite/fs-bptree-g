@@ -33,6 +33,12 @@
 
 
 /*{---------------------- Private Function Declaration -----------------------*/
+
+/**
+ * @brief   Serialize bptr header info into self->fbuf
+ *
+ * @param[in,out] self  bptr obj. Only @c fbuf member is modified.
+ */
 static inline
 void bptr_header_marshal(struct bptr *self);
 /*}---------------------- Private Function Declaration -----------------------*/
@@ -283,7 +289,6 @@ while (0)
 /*--------------------------- Public Functions END ---------------------------*/
 
 /*{--------------------------- Private Functions -----------------------------*/
-// Serialize bptr header info into self->fbuf
 static inline
 void bptr_header_marshal(struct bptr *self)
 {
