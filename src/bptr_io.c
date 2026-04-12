@@ -41,6 +41,23 @@
  */
 static inline
 void bptr_header_marshal(struct bptr *self);
+/**
+ * @brief   Flush metadata from fbuf to the file
+ *
+ * @param[in,out] self  bptr obj. @c fbuf is read and @c file is read&written.
+ *
+ * @return        execute status
+ * @retval        0 (BPTR_E_SUCCESS)   Success
+ * @retval        BPTR_E_FACCESS       Failed on @c fwrite or @c fflush .
+ *
+ * @warning This function only writes @c fbuf member directly to header of the
+ *          file. Caller shall fill @c fbuf correctly before calling this
+ *          function (e.g., use @c bptr_header_marshal ).
+ *
+ * @see  bptr_header_marshal
+ */
+static inline
+int _flush_to_header(struct bptr *self);
 /*}---------------------- Private Function Declaration -----------------------*/
 
 
@@ -293,5 +310,18 @@ void bptr_header_marshal(struct bptr *self)
    else
       _bptr_fcreat_write_uptr_metadata(BPTR_NORM_PTR_TYPE,
                                        BPTR_NORM_PTR_BYTE);
+}
+
+
+// Flush the Buffer to the file
+static inline
+int _flush_to_header(struct bptr *self)
+{
+   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
+      return BPTR_E_FACCESS;
+   if (fflush(self->file))
+      return BPTR_E_FACCESS;
+
+   return 0;
 }
 /*}--------------------------- Private Functions -----------------------------*/
