@@ -29,6 +29,12 @@
    self->free_list.cnt = *(uptr_type*)memit; memit += (uptr_size); \
    self->node_cnt = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
+
+#define _set_err_code(has_set_e, e_code_var, e_code) do \
+{ \
+   if (!(has_set_e)) { (e_code_var) = (e_code); (has_set_e) = 1; } \
+} while (0)
+#define set_err_code(e_code) _set_err_code(has_set_err, err_code, e_code)
 /*---------------------------- Private Macros END ----------------------------*/
 
 
@@ -46,7 +52,7 @@ void bptr_header_marshal(struct bptr *self);
  *
  * @param[in,out] self  bptr obj. @c fbuf is read and @c file is read&written.
  *
- * @return        execute status
+ * @return        execution status
  * @retval        0 (BPTR_E_SUCCESS)   Success
  * @retval        BPTR_E_FACCESS       Failed on @c fwrite or @c fflush .
  *
@@ -58,12 +64,28 @@ void bptr_header_marshal(struct bptr *self);
  */
 static inline
 int _flush_to_header(struct bptr *self);
+/**
+ * @brief   Write bptr obj. content to file header.
+ *
+ * @param[in,out] self  bptr obj.
+ *
+ * @return        execution status
+ * @retval        0 (BPTR_E_SUCCESS)   Success
+ * @retval        BPTR_E_FACCESS       Failed on @c fwrite or @c fflush .
+ *
+ * @see  _flush_to_header
+ * @see  bptr_header_marshal
+ */
+static inline
+int _header_fwrite(struct bptr *self)
+{ bptr_header_marshal(self); return _flush_to_header(self); }
 /*}---------------------- Private Function Declaration -----------------------*/
 
 
 /*----------------------------- Public Functions -----------------------------*/
 int bptr_io_fcreat(struct bptr *self, const char *filename)
 {
+   _Bool has_set_err = 0;
    int err_code;
    char *memit;
 
@@ -82,17 +104,12 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
       goto FBUF_MALLOC_ERR;
     }
 
-   bptr_header_marshal(self);
-
-   /* Flush the Buffer to the file */
-   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
+   switch (_header_fwrite(self))
     {
-      err_code = 3;
-      goto FWRITE_ERR;
-    }
-   if (fflush(self->file))
-    {
-      err_code = 4;
+   case 0:  break;
+   default:
+      set_err_code(BPTR_E_UNREACHABLE);
+   case BPTR_E_FACCESS:
       goto FWRITE_ERR;
     }
 
