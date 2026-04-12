@@ -65,31 +65,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
       goto FBUF_MALLOC_ERR;
     }
 
-   /* Write file header */
-   memit = self->fbuf;
-   strncpy(memit, BPTR_MAGIC_STR, 4);
-   memit += 4;
-   *(uint32_t*)memit = (self->is_lite) ?
-                       0x80 | BPTR_CURRENT_VERSION : BPTR_CURRENT_VERSION;
-   memit += 4;
-   *(uint32_t*)memit = self->node_size;
-   memit += 4;
-
-   *(uint16_t*)memit = self->key_size;
-   memit += 2;
-   *(uint16_t*)memit = self->value_size;
-   memit += 2;
-
-   *(uint64_t*)memit = self->record_cnt;
-   memit += 8;
-   *(uint32_t*)memit = self->height;
-   memit += 4;
-   if (self->is_lite)
-      _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
-                                       BPTR_LITE_PTR_BYTE);
-   else
-      _bptr_fcreat_write_uptr_metadata(BPTR_NORM_PTR_TYPE,
-                                       BPTR_NORM_PTR_BYTE);
+   bptr_header_marshal(self);
 
    /* Flush the Buffer to the file */
    if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
