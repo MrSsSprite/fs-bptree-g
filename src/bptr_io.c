@@ -92,17 +92,11 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    /* Create file */
    self->file = fopen(filename, "wbx+");
    if (self->file == NULL)
-    {
-      err_code = 1;
       goto FOPEN_ERR;
-    }
    /* malloc for file buffer */
    self->fbuf = malloc(self->node_size);
    if (self->fbuf == NULL)
-    {
-      err_code = 2;
       goto FBUF_MALLOC_ERR;
-    }
 
    switch (_header_fwrite(self))
     {
@@ -115,11 +109,11 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
 
    return 0;
 
-FWRITE_ERR:
+FWRITE_ERR:      set_err_code(BPTR_E_FACCESS);
    free(self->fbuf);
-FBUF_MALLOC_ERR:
+FBUF_MALLOC_ERR: set_err_code(BPTR_E_OOM);
    fclose(self->file);
-FOPEN_ERR:
+FOPEN_ERR:       set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
