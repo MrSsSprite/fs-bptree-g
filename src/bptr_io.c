@@ -204,12 +204,26 @@ FOPEN_ERR:
 
 int bptr_io_fclose(struct bptr *self)
 {
+   _Bool has_set_err = 0;
    int err_code = 0;
 
+   // TODO: flush cached nodes
+   switch (_header_fwrite(self))
+    {
+   case 0: break;
+   default:
+      set_err_code(BPTR_E_UNREACHABLE);
+   case BPTR_E_FACCESS:
+      goto FWRITE_ERR;
+    }
+
    if (fclose(self->file))
-      err_code = 1;
+      err_code = BPTR_E_FCLOSE;
    free(self->fbuf);
 
+   return err_code;
+
+FWRITE_ERR: set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
