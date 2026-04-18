@@ -131,7 +131,7 @@ int bptr_destroy(struct bptr *self)
    int err_code = 0;
 
    if (bptr_io_fclose(self))
-      err_code = 1;
+      err_code = BPTR_E_FCLOSE;
    free(self);
 
    return err_code;
