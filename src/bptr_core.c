@@ -126,7 +126,7 @@ FLOAD_ERR:
    return NULL;
 }
 
-int bptr_destroy(struct bptr *self)
+int bptr_unload(struct bptr *self)
 {
    int err_code = 0;
 

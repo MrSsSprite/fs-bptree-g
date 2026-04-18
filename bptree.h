@@ -42,7 +42,7 @@ int bptr_erase(struct bptr *self, const void *key);
 const void *bptr_find(struct bptr *self, const void *key);
 int bptr_find_range(struct bptr *self, const void *bg, const void *ed,
                     void **res_it);
-int bptr_destroy(struct bptr *self);
+int bptr_unload(struct bptr *self);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif
