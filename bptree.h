@@ -42,6 +42,16 @@ int bptr_erase(struct bptr *self, const void *key);
 const void *bptr_find(struct bptr *self, const void *key);
 int bptr_find_range(struct bptr *self, const void *bg, const void *ed,
                     void **res_it);
+/**
+ * @brief   unload the bptr obj.
+ *
+ * Unload the bptr object and flush the content.
+ *
+ * @param[in,out] self  bptr obj. to be unloaded
+ * @return  execution status
+ * @retval  0(BPTR_E_SUCCESS) Success
+ * @retval  BPTR_E_FCLOSE     Failed at fclose
+ */
 int bptr_unload(struct bptr *self);
 /*--------------------------- Public Functions END ---------------------------*/
 
