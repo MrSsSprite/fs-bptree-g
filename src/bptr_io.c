@@ -218,6 +218,7 @@ int bptr_io_fclose(struct bptr *self)
     }
 
    if (fclose(self->file))
+      // don't goto err handler as further access is undefined even on error
       err_code = BPTR_E_FCLOSE;
    free(self->fbuf);
 
