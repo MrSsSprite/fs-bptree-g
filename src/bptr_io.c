@@ -122,7 +122,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
 {
    uint32_t mvb_buf[3];
    int err_code;
-   void *memit;
+   char *memit;
 
    /* Open file */
    self->file = fopen(filename, "rb+");
@@ -175,12 +175,10 @@ int bptr_io_fload(struct bptr *self, const char *filename)
 
    /* load metadata in header block into handler */
    memit = self->fbuf + 12;
-   self->node_size = *(uint32_t*)memit;
-   memit += 4;
    self->key_size = *(uint16_t*)memit;
-   memit += 1;
+   memit += 2;
    self->value_size = *(uint16_t*)memit;
-   memit += 3; // +1 for padding
+   memit += 2;
    self->record_cnt = *(uint64_t*)memit;
    memit += 8;
    self->height = *(uint32_t*)memit;
