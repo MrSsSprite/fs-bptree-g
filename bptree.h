@@ -36,7 +36,8 @@ struct bptr *bptr_init
    uint16_t value_size,
    int (*compare)(const void *lhs, const void *rhs)
 );
-struct bptr *bptr_load(const char *filename);
+struct bptr *bptr_load(const char *filename,
+                       int (*compare)(const void *lhs, const void *rhs));
 int bptr_insert(struct bptr *self, const void *key, const void *value);
 int bptr_erase(struct bptr *self, const void *key);
 const void *bptr_find(struct bptr *self, const void *key);

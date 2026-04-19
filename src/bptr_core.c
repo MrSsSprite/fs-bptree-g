@@ -100,7 +100,8 @@ INVALID_FANOUT_ERR:
 }
 
 
-struct bptr *bptr_load(const char *filename)
+struct bptr *bptr_load(const char *filename,
+                       int (*compare)(const void *lhs, const void *rhs))
 {
    struct bptr *self;
    int fn_ret;
@@ -116,6 +117,7 @@ struct bptr *bptr_load(const char *filename)
       goto FLOAD_ERR;
     }
    _bptr_bound_set(self);
+   self->compare = compare;
 
    return self;
 
