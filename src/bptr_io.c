@@ -343,7 +343,7 @@ void bptr_header_marshal(struct bptr *self)
 static inline
 int _flush_to_header(struct bptr *self)
 {
-   if (fseek64(self->fbuf, 0, SEEK_SET))
+   if (fseek64(self->file, 0, SEEK_SET))
       return BPTR_E_FACCESS;
    if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
       return BPTR_E_FACCESS;
