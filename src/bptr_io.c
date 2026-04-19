@@ -106,7 +106,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
 {
    uint32_t mvb_buf[3];
    int err_code;
-   void *memit;
+   char *memit;
 
    /* Open file */
    self->file = fopen(filename, "rb+");
