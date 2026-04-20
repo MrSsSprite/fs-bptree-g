@@ -35,7 +35,15 @@ int bptr_io_fcreat(struct bptr *self, const char *filename);
 int bptr_io_fload(struct bptr *self, const char *filename);
 /**
  * @brief   close the file and clean up file-related resources
+ *
+ * @param[in,out] self  target bptr obj.
+ *
  * @return  0 on success. Otherwise, the error code is returned.
+ * @retval  0(BPTR_E_SUCCESS) Success
+ * @retval  BPTR_E_FACCESS    Failed when flushing caches
+ * @retval  BPTR_E_FCLOSE     Failed at fclose
+ *
+ * @note This function flushes caches before closing the file.
  */
 int bptr_io_fclose(struct bptr *self);
 int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx);

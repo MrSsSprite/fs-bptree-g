@@ -29,75 +29,91 @@
    self->free_list.cnt = *(uptr_type*)memit; memit += (uptr_size); \
    self->node_cnt = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
+
+#define _set_err_code(has_set_e, e_code_var, e_code) do \
+{ \
+   if (!(has_set_e)) { (e_code_var) = (e_code); (has_set_e) = 1; } \
+} while (0)
+#define set_err_code(e_code) _set_err_code(has_set_err, err_code, e_code)
 /*---------------------------- Private Macros END ----------------------------*/
+
+
+/*{---------------------- Private Function Declaration -----------------------*/
+
+/**
+ * @brief   Serialize bptr header info into self->fbuf
+ *
+ * @param[in,out] self  bptr obj. Only @c fbuf member is modified.
+ */
+static inline
+void bptr_header_marshal(struct bptr *self);
+/**
+ * @brief   Flush metadata from fbuf to the file
+ *
+ * @param[in,out] self  bptr obj. @c fbuf is read and @c file is read&written.
+ *
+ * @return        execution status
+ * @retval        0 (BPTR_E_SUCCESS)   Success
+ * @retval        BPTR_E_FACCESS       Failed on @c fwrite or @c fflush .
+ *
+ * @warning This function only writes @c fbuf member directly to header of the
+ *          file. Caller shall fill @c fbuf correctly before calling this
+ *          function (e.g., use @c bptr_header_marshal ).
+ *
+ * @see  bptr_header_marshal
+ */
+static inline
+int _flush_to_header(struct bptr *self);
+/**
+ * @brief   Write bptr obj. content to file header.
+ *
+ * @param[in,out] self  bptr obj.
+ *
+ * @return        execution status
+ * @retval        0 (BPTR_E_SUCCESS)   Success
+ * @retval        BPTR_E_FACCESS       Failed on @c fwrite or @c fflush .
+ *
+ * @see  _flush_to_header
+ * @see  bptr_header_marshal
+ */
+static inline
+int _header_fwrite(struct bptr *self)
+{ bptr_header_marshal(self); return _flush_to_header(self); }
+/*}---------------------- Private Function Declaration -----------------------*/
 
 
 /*----------------------------- Public Functions -----------------------------*/
 int bptr_io_fcreat(struct bptr *self, const char *filename)
 {
+   _Bool has_set_err = 0;
    int err_code;
    char *memit;
 
    /* Create file */
    self->file = fopen(filename, "wbx+");
    if (self->file == NULL)
-    {
-      err_code = 1;
       goto FOPEN_ERR;
-    }
    /* malloc for file buffer */
    self->fbuf = malloc(self->node_size);
    if (self->fbuf == NULL)
-    {
-      err_code = 2;
       goto FBUF_MALLOC_ERR;
-    }
 
-   /* Write file header */
-   memit = self->fbuf;
-   strncpy(memit, BPTR_MAGIC_STR, 4);
-   memit += 4;
-   *(uint32_t*)memit = (self->is_lite) ?
-                       0x80 | BPTR_CURRENT_VERSION : BPTR_CURRENT_VERSION;
-   memit += 4;
-   *(uint32_t*)memit = self->node_size;
-   memit += 4;
-
-   *(uint16_t*)memit = self->key_size;
-   memit += 2;
-   *(uint16_t*)memit = self->value_size;
-   memit += 2;
-
-   *(uint64_t*)memit = self->record_cnt;
-   memit += 8;
-   *(uint32_t*)memit = self->height;
-   memit += 4;
-   if (self->is_lite)
-      _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
-                                       BPTR_LITE_PTR_BYTE);
-   else
-      _bptr_fcreat_write_uptr_metadata(BPTR_NORM_PTR_TYPE,
-                                       BPTR_NORM_PTR_BYTE);
-
-   /* Flush the Buffer to the file */
-   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
+   switch (_header_fwrite(self))
     {
-      err_code = 3;
-      goto FWRITE_ERR;
-    }
-   if (fflush(self->file))
-    {
-      err_code = 4;
+   case 0:  break;
+   default:
+      set_err_code(BPTR_E_UNREACHABLE);
+   case BPTR_E_FACCESS:
       goto FWRITE_ERR;
     }
 
    return 0;
 
-FWRITE_ERR:
+FWRITE_ERR:      set_err_code(BPTR_E_FACCESS);
    free(self->fbuf);
-FBUF_MALLOC_ERR:
+FBUF_MALLOC_ERR: set_err_code(BPTR_E_OOM);
    fclose(self->file);
-FOPEN_ERR:
+FOPEN_ERR:       set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
@@ -186,12 +202,27 @@ FOPEN_ERR:
 
 int bptr_io_fclose(struct bptr *self)
 {
+   _Bool has_set_err = 0;
    int err_code = 0;
 
+   // TODO: flush cached nodes
+   switch (_header_fwrite(self))
+    {
+   case 0: break;
+   default:
+      set_err_code(BPTR_E_UNREACHABLE);
+   case BPTR_E_FACCESS:
+      goto FWRITE_ERR;
+    }
+
    if (fclose(self->file))
-      err_code = 1;
+      // don't goto err handler as further access is undefined even on error
+      err_code = BPTR_E_FCLOSE;
    free(self->fbuf);
 
+   return err_code;
+
+FWRITE_ERR: set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
@@ -273,3 +304,50 @@ while (0)
    return pos;
 }
 /*--------------------------- Public Functions END ---------------------------*/
+
+/*{--------------------------- Private Functions -----------------------------*/
+static inline
+void bptr_header_marshal(struct bptr *self)
+{
+   char *memit = self->fbuf;
+
+   strncpy(memit, BPTR_MAGIC_STR, 4);
+   memit += 4;
+   *(uint32_t*)memit = (self->is_lite) ?
+                       0x80 | BPTR_CURRENT_VERSION : BPTR_CURRENT_VERSION;
+   memit += 4;
+   *(uint32_t*)memit = self->node_size;
+   memit += 4;
+
+   *(uint16_t*)memit = self->key_size;
+   memit += 2;
+   *(uint16_t*)memit = self->value_size;
+   memit += 2; // +1 for padding
+
+   *(uint64_t*)memit = self->record_cnt;
+   memit += 8;
+   *(uint32_t*)memit = self->height;
+   memit += 4;
+   if (self->is_lite)
+      _bptr_fcreat_write_uptr_metadata(BPTR_LITE_PTR_TYPE,
+                                       BPTR_LITE_PTR_BYTE);
+   else
+      _bptr_fcreat_write_uptr_metadata(BPTR_NORM_PTR_TYPE,
+                                       BPTR_NORM_PTR_BYTE);
+}
+
+
+// Flush the Buffer to the file
+static inline
+int _flush_to_header(struct bptr *self)
+{
+   if (fseek64(self->file, 0, SEEK_SET))
+      return BPTR_E_FACCESS;
+   if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
+      return BPTR_E_FACCESS;
+   if (fflush(self->file))
+      return BPTR_E_FACCESS;
+
+   return 0;
+}
+/*}--------------------------- Private Functions -----------------------------*/
