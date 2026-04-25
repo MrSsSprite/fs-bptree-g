@@ -60,7 +60,7 @@ struct bptr *bptr_init
    uint16_t key_size,
    uint16_t value_size,
    int (*compare)(const void *lhs, const void *rhs)
-   )
+)
 {
    struct bptr *self;
 
@@ -100,7 +100,8 @@ INVALID_FANOUT_ERR:
 }
 
 
-struct bptr *bptr_load(const char *filename)
+struct bptr *bptr_load(const char *filename,
+                       int (*compare)(const void *lhs, const void *rhs))
 {
    struct bptr *self;
    int fn_ret;
@@ -116,6 +117,7 @@ struct bptr *bptr_load(const char *filename)
       goto FLOAD_ERR;
     }
    _bptr_bound_set(self);
+   self->compare = compare;
 
    return self;
 
@@ -126,12 +128,12 @@ FLOAD_ERR:
    return NULL;
 }
 
-int bptr_destroy(struct bptr *self)
+int bptr_unload(struct bptr *self)
 {
    int err_code = 0;
 
    if (bptr_io_fclose(self))
-      err_code = 1;
+      err_code = BPTR_E_FCLOSE;
    free(self);
 
    return err_code;
