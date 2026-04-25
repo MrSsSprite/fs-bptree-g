@@ -18,6 +18,9 @@
 #define _node_brch_vals_get(self, node, idx) \
    ((self)->is_lite ? *((BPTR_LITE_PTR_TYPE*)(node)->vals + (idx)) : \
                       *((BPTR_NORM_PTR_TYPE*)(node)->vals + (idx)))
+
+#define _node_val_cnt(node) \
+   ((node)->is_leaf ? (node)->key_count : (node)->key_count + 1)
 /*---------------------------- Public Macros END -----------------------------*/
 
 
