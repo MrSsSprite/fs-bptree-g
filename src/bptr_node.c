@@ -86,7 +86,7 @@
  * @note    Serialization should be a more accurate name, but marshal is
  *          adopted as it's shorter.
  */
-static inline
+BPTR_STATIC inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   Serialize node data from self->fbuf to node struct.
@@ -104,7 +104,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
  * @node       Serialization should be a more accurate name, but marshal is
  *             adopted as it's shorter.
  */
-static inline
+BPTR_STATIC inline
 int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   preallocate node-sized space in file
@@ -119,7 +119,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
  * @remark  the return value is node indx. This means the actual file offset is
  *          calculated thru. `ret * self->node_size`.
  */
-static inline
+BPTR_STATIC inline
 bptr_node_t bptr_node_prealloc (struct bptr *self);
 /**
  * @brief   Vacate the file space occupied by the node.
@@ -140,7 +140,7 @@ bptr_node_t bptr_node_prealloc (struct bptr *self);
  *          for nulling the index or discarding the node to prevent accidental
  *          use of vacated space.
  */
-static inline
+BPTR_STATIC inline
 int bptr_node_vacate(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   Insert a key into keys
@@ -158,7 +158,7 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node);
  * @note    This function assumes correct @c node->key_count . It causes
  *          undefined behavior if such assumption is not fulfilled.
  */
-static inline
+BPTR_STATIC inline
 void _node_key_insert(struct bptr *self, struct bptr_node *node,
                       const void *key, uint_fast32_t idx);
 /**
@@ -177,7 +177,7 @@ void _node_key_insert(struct bptr *self, struct bptr_node *node,
  * @note    This function assumes correct @c node->key_count . It causes
  *          undefined behavior if such assumption is not fulfilled.
  */
-static inline
+BPTR_STATIC inline
 void _node_val_insert(struct bptr *self, struct bptr_node *node,
                       const void *val, uint_fast32_t idx);
 /**
@@ -195,7 +195,7 @@ void _node_val_insert(struct bptr *self, struct bptr_node *node,
  * @note    This function assumes correct @c node->key_count . It causes
  *          undefined behavior if such assumption is not fulfilled.
  */
-static inline
+BPTR_STATIC inline
 void _node_key_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx);
 /**
@@ -213,7 +213,7 @@ void _node_key_erase(struct bptr *self, struct bptr_node *node,
  * @note    This function assumes correct @c node->key_count . It causes
  *          undefined behavior if such assumption is not fulfilled.
  */
-static inline
+BPTR_STATIC inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx);
 /*-------------------- Private Function Declarations END ---------------------*/
@@ -338,7 +338,7 @@ bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node)
 
 
 /*---------------------------- Private Functions -----------------------------*/
-static inline
+BPTR_STATIC inline
 void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
@@ -363,7 +363,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 }
 
 
-static inline
+BPTR_STATIC inline
 int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
@@ -397,7 +397,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
    return 0;
 }
 
-static
+BPTR_STATIC
 bptr_node_t bptr_node_prealloc (struct bptr *self)
 {
    bptr_node_t ret;
@@ -437,7 +437,7 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
 }
 
 
-static inline
+BPTR_STATIC inline
 int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
 #define _WRITE_FL_HEAD(T) do \
 { \
@@ -465,7 +465,7 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
 }
 
 
-static inline
+BPTR_STATIC inline
 void _node_key_insert(struct bptr *self, struct bptr_node *node,
                       const void *key, uint_fast32_t idx)
 {
@@ -485,7 +485,7 @@ void _node_key_insert(struct bptr *self, struct bptr_node *node,
 }
 
 
-static inline
+BPTR_STATIC inline
 void _node_val_insert(struct bptr *self, struct bptr_node *node,
                       const void *val, uint_fast32_t idx)
 {
@@ -507,7 +507,7 @@ void _node_val_insert(struct bptr *self, struct bptr_node *node,
 }
 
 
-static inline
+BPTR_STATIC inline
 void _node_child_insert(struct bptr *self, struct bptr_node *parent_n,
                         bptr_node_t child_ptr, uint_fast32_t idx)
 {
@@ -525,7 +525,7 @@ void _node_child_insert(struct bptr *self, struct bptr_node *parent_n,
 
 
 
-static inline
+BPTR_STATIC inline
 void _node_key_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx)
 {
@@ -537,7 +537,7 @@ void _node_key_erase(struct bptr *self, struct bptr_node *node,
 }
 
 
-static inline
+BPTR_STATIC inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx)
 {
