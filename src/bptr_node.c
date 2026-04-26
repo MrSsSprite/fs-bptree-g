@@ -621,7 +621,7 @@ uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
 }
 
 
-static
+BPTR_STATIC
 bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val)
 {
