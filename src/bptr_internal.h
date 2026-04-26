@@ -18,6 +18,12 @@
 // Temporarily hardcoded in dev stage
 // Default block size
 #define BPTR_NODE_BYTE_DEFAULT   512
+
+#ifdef BPTR_TESTING
+#define BPTR_STATIC
+#else
+#define BPTR_STATIC static
+#endif
 /*---------------------------- Public Defines END ----------------------------*/
 
 

@@ -45,7 +45,7 @@
  *
  * @param[in,out] self  bptr obj. Only @c fbuf member is modified.
  */
-static inline
+BPTR_STATIC inline
 void bptr_header_marshal(struct bptr *self);
 /**
  * @brief   Flush metadata from fbuf to the file
@@ -62,7 +62,7 @@ void bptr_header_marshal(struct bptr *self);
  *
  * @see  bptr_header_marshal
  */
-static inline
+BPTR_STATIC inline
 int _flush_to_header(struct bptr *self);
 /**
  * @brief   Write bptr obj. content to file header.
@@ -76,7 +76,7 @@ int _flush_to_header(struct bptr *self);
  * @see  _flush_to_header
  * @see  bptr_header_marshal
  */
-static inline
+BPTR_STATIC inline
 int _header_fwrite(struct bptr *self)
 { bptr_header_marshal(self); return _flush_to_header(self); }
 /*}---------------------- Private Function Declaration -----------------------*/
@@ -306,7 +306,7 @@ while (0)
 /*--------------------------- Public Functions END ---------------------------*/
 
 /*{--------------------------- Private Functions -----------------------------*/
-static inline
+BPTR_STATIC inline
 void bptr_header_marshal(struct bptr *self)
 {
    char *memit = self->fbuf;
@@ -338,7 +338,7 @@ void bptr_header_marshal(struct bptr *self)
 
 
 // Flush the Buffer to the file
-static inline
+BPTR_STATIC inline
 int _flush_to_header(struct bptr *self)
 {
    if (fseek64(self->file, 0, SEEK_SET))

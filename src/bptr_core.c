@@ -41,7 +41,7 @@ struct node_idx_pair
 
 
 /*----------------------- Private Function Declaration -----------------------*/
-static
+BPTR_STATIC
 struct node_idx_pair bptr_find_node(struct bptr *self, const void *key);
 /*--------------------- Private Function Declaration END ---------------------*/
 
@@ -172,7 +172,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
 // if the tree is not empty && the key is not found,
 //    idx refers to the smallest key that is greater than the key for which the 
 //    table is searched. idx ref to one-pass the last valid key
-static
+BPTR_STATIC
 struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
 {
    struct bptr_node *node;
