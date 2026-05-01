@@ -626,7 +626,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val)
 {
    // TODO: replace error codes magic # with manifest constant
-   struct bptr_node *new_n, *parent_n;
+   struct bptr_node *new_n, *parent_n, *next_n;
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
                                            self->node_bound.brch.up) - 1,
@@ -650,25 +650,28 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
    /*{--------------------- Pre-Work: Update prev, next ----------------------*/
    // update new_n->next->prev
-   struct bptr_node *next_n = bptr_node_load(self, node->next);
-   if (next_n == NULL)
+   if (node->next)
     {
-      switch (bptr_errno)
+      next_n = bptr_node_load(self, node->next);
+      if (next_n == NULL)
        {
-      case BPTR_E_OOM:  break;
-      case -1:
-         bptr_errno = 200; break;
-      default:
-         bptr_errno = BPTR_E_UNREACHABLE; break;
+         switch (bptr_errno)
+          {
+         case BPTR_E_OOM:  break;
+         case -1:
+            bptr_errno = 200; break;
+         default:
+            bptr_errno = BPTR_E_UNREACHABLE; break;
+          }
+         goto NEXT_N_UPDATE_ERROR;
        }
-      goto NEXT_N_UPDATE_ERROR;
-    }
-   next_n->prev = new_n->node_idx;
-   next_n->is_dirty = 1;
-   if (bptr_node_unload(self, next_n))
-    {
-      bptr_node_free(next_n);
-      bptr_errno = 200; goto NEXT_N_UPDATE_ERROR;
+      next_n->prev = new_n->node_idx;
+      next_n->is_dirty = 1;
+      if (bptr_node_unload(self, next_n))
+       {
+         bptr_node_free(next_n);
+         bptr_errno = 200; goto NEXT_N_UPDATE_ERROR;
+       }
     }
 
    new_n->next = node->next;
