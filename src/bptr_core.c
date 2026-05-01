@@ -85,6 +85,7 @@ struct bptr *bptr_init
    self->record_cnt = 0;
    self->node_cnt = 0;
    self->height = 0;
+   self->compare = compare;
 
    /* Construct the file */
    if (bptr_io_fcreat(self, filename)) 
