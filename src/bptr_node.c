@@ -698,6 +698,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          goto PAR_N_LOAD_ERR;
        }
       has_new_parent = 1;
+      // node was root as it has no parent
+      parent_n->prev = parent_n->next = 0;
       // add orig. node into parent_n->vals in advance
       _node_val_insert(self, parent_n, node, 0);
     }
