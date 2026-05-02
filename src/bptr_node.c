@@ -706,7 +706,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       // node was root as it has no parent
       parent_n->prev = parent_n->next = 0;
       // add orig. node into parent_n->vals in advance
-      _node_val_insert(self, parent_n, node, 0);
+      _node_child_insert(self, parent_n, node->node_idx, 0);
     }
    else
     {
