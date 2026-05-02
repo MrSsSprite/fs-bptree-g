@@ -154,7 +154,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
    // Empty Tree
    if (find_res.node == NULL)
     {
-      find_res.node = bptr_node_new(self, 1, 0);
+      find_res.node = bptr_node_new(self, 0);
       if (find_res.node == NULL) return 1;
       find_res.node->prev = find_res.node->next = 0;
       find_res.idx = 0;
