@@ -228,7 +228,8 @@ struct bptr_node *bptr_node_new
    uint16_t flags;
    struct bptr_node *node;
 
-   node = malloc(sizeof(struct bptr_node));
+   // zero-initialize to avoid valgrind warning on uninitialized padding bits
+   node = calloc(1, sizeof(struct bptr_node));
    if (node == NULL)
     { bptr_errno = 1; goto NODE_MALLOC_ERR; }
 
@@ -284,6 +285,8 @@ void bptr_node_free(struct bptr_node *node)
 
 int bptr_node_unload(struct bptr *self, struct bptr_node *node)
 {
+   // TODO: checksum; below is merely temporary placeholder
+   node->checksum = 0;
    //TODO: involve cache mechanism
    if (node->is_dirty && bptr_node_flush(self, node) == 0)
       return 2;
