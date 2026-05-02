@@ -94,7 +94,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    if (self->file == NULL)
       goto FOPEN_ERR;
    /* malloc for file buffer */
-   self->fbuf = malloc(self->node_size);
+   self->fbuf = calloc(1, self->node_size);
    if (self->fbuf == NULL)
       goto FBUF_MALLOC_ERR;
 
@@ -158,7 +158,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
     }
 
    /* malloc file buffer */
-   self->fbuf = malloc(self->node_size);
+   self->fbuf = calloc(1, self->node_size);
    if (self->fbuf == NULL)
     {
       err_code = 3;
