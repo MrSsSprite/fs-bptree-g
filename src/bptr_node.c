@@ -648,8 +648,52 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    if (bptr_errno == 0) { bptr_errno = -2; goto PRE_WORK_ERR; }
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
+   /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
+   if (node->parent == 0)
+    {
+      parent_n = bptr_node_new(self, 0);
+      if (parent_n == NULL)
+       {
+         switch (bptr_errno)
+          {
+         case BPTR_E_OOM:
+         case 2:
+            break;
+         default:
+            bptr_errno = BPTR_E_UNREACHABLE; break;
+          }
+         goto PAR_N_LOAD_ERR;
+       }
+
+      has_new_parent = 1;
+      // node was root as it has no parent
+      parent_n->prev = parent_n->next = 0;
+      // add orig. node into parent_n->vals in advance
+      _node_child_insert(self, parent_n, node->node_idx, 0);
+      node->parent = parent_n->node_idx;
+      self->root_idx = parent_n->node_idx;
+    }
+   else
+    {
+      has_new_parent = 0;
+      parent_n = bptr_node_load(self, node->parent);
+      if (parent_n == NULL)
+       {
+         switch (bptr_errno)
+          {
+         case BPTR_E_OOM:  break;
+         case -1:
+            bptr_errno = 200; break;
+         default:
+            bptr_errno = BPTR_E_UNREACHABLE; break;
+          }
+         goto PAR_N_LOAD_ERR;
+       }
+    }
+   /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
+
    /*{-------------------- Pre-work: Init new empty node ---------------------*/
-   new_n = bptr_node_new(self, 1, node->parent);
+   new_n = bptr_node_new(self, node->parent);
    if (new_n == NULL) { bptr_errno = 201; goto NEW_N_MALLOC_ERR; };
    /*}-------------------- Pre-work: Init new empty node ---------------------*/
 
@@ -685,47 +729,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    node->next = new_n->node_idx;
    node->is_dirty = 1;
    /*}--------------------- Pre-Work: Update prev, next ----------------------*/
-
-   /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
-   if (node->parent == 0)
-    {
-      parent_n = bptr_node_new(self, 0);
-      if (parent_n == NULL)
-       {
-         switch (bptr_errno)
-          {
-         case BPTR_E_OOM:
-         case 2:
-            break;
-         default:
-            bptr_errno = BPTR_E_UNREACHABLE; break;
-          }
-         goto PAR_N_LOAD_ERR;
-       }
-      has_new_parent = 1;
-      // node was root as it has no parent
-      parent_n->prev = parent_n->next = 0;
-      // add orig. node into parent_n->vals in advance
-      _node_child_insert(self, parent_n, node->node_idx, 0);
-    }
-   else
-    {
-      has_new_parent = 0;
-      parent_n = bptr_node_load(self, node->parent);
-      if (parent_n == NULL)
-       {
-         switch (bptr_errno)
-          {
-         case BPTR_E_OOM:  break;
-         case -1:
-            bptr_errno = 200; break;
-         default:
-            bptr_errno = BPTR_E_UNREACHABLE; break;
-          }
-         goto PAR_N_LOAD_ERR;
-       }
-    }
-   /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
 
    /*{------------------------ Main-Work: Split node -------------------------*/
    if (node->is_leaf)
@@ -889,13 +892,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
-   // edge case: update self->root if the node being split is root
-   if (self->root_idx == node->node_idx)
-    {
-      self->root_idx = parent_n->node_idx;
-      self->height++;
-    }
-
    if (bptr_node_unload(self, parent_n))
     { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
    ret = new_n->node_idx;
@@ -909,10 +905,17 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 // restore back to the state before fn call on error
 FINISH_TOUCH_ERR:
 PAR_SPLIT_ERR:
+NEXT_N_UPDATE_ERROR:
+   bptr_node_vacate(self, new_n);
+   bptr_node_free(new_n);
+NEW_N_MALLOC_ERR:
    if (has_new_parent)
     {
       bptr_node_vacate(self, parent_n);
       bptr_node_free(parent_n);
+      self->height--;
+      node->parent = 0;
+      self->root_idx = node->node_idx;
     }
    else
     {
@@ -921,10 +924,6 @@ PAR_SPLIT_ERR:
       bptr_node_unload(self, parent_n);
     }
 PAR_N_LOAD_ERR:
-NEXT_N_UPDATE_ERROR:
-   bptr_node_vacate(self, new_n);
-   bptr_node_free(new_n);
-NEW_N_MALLOC_ERR:
 PRE_WORK_ERR:
    return 0;
 }
