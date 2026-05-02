@@ -222,8 +222,9 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
 /*----------------------------- Public Functions -----------------------------*/
 // node->{prev, next} are left uninitialized; the
 // caller is responsible to write that
+// if parent == 0, self->height is incremented
 struct bptr_node *bptr_node_new
- (struct bptr *self, _Bool is_leaf, bptr_node_t parent)
+ (struct bptr *self, bptr_node_t parent)
 {
    uint16_t flags;
    struct bptr_node *node;
@@ -233,8 +234,20 @@ struct bptr_node *bptr_node_new
    if (node == NULL)
     { bptr_errno = 1; goto NODE_MALLOC_ERR; }
 
+   if (parent)
+    {
+      struct bptr_node *parent_node = bptr_node_load(self, parent);
+      if (parent_node == NULL)
+       { bptr_errno = 2; goto LOAD_PARENT_ERR; }
+      node->level = parent_node->level - 1;
+      if (bptr_node_unload(self, parent_node))
+       { bptr_errno = 200; goto LOAD_PARENT_ERR; }
+    }
+   else
+      // if parent == 0, root split
+      node->level = self->height++;
    flags = BPTR_NODE_FLAG_VALID;
-   if (is_leaf)
+   if (node->level == 0)
     {
       flags |= BPTR_NODE_FLAG_LEAF;
       node->is_leaf = 1;
@@ -250,27 +263,16 @@ struct bptr_node *bptr_node_new
    _node_kv_malloc(self, node);
    if (node->keys == NULL || node->vals == NULL)
     { bptr_errno = 1; goto KV_MALLOC_ERR; }
-   if (parent)
-    {
-      struct bptr_node *parent_node = bptr_node_load(self, parent);
-      if (parent_node == NULL)
-       { bptr_errno = 2; goto LOAD_PARENT_ERR; }
-      node->level = parent_node->level - 1;
-      if (bptr_node_unload(self, parent_node))
-       { bptr_errno = 200; goto LOAD_PARENT_ERR; }
-    }
-   else
-      node->level = 0;
    /* TODO: checksum */
 
    return node;
 
-LOAD_PARENT_ERR:
 KV_MALLOC_ERR:
    free(node->vals);
    free(node->keys);
 PREALLOC_ERR:
    free(node);
+LOAD_PARENT_ERR:
 NODE_MALLOC_ERR:
    return NULL;
 }

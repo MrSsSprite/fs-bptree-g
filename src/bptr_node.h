@@ -44,7 +44,7 @@ struct bptr_node
 
 /*----------------------------- Public Functions -----------------------------*/
 struct bptr_node *bptr_node_new
- (struct bptr *self, _Bool is_leaf, bptr_node_t parent);
+ (struct bptr *self, bptr_node_t parent);
 void bptr_node_free(struct bptr_node *node);
  
 int bptr_node_erase(bptr_node_t node_idx);
