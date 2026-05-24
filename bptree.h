@@ -17,6 +17,8 @@
 #define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable (57005 dec.)
 #define BPTR_E_TODO        (0xBEEF) // Not yet implemented (48879 dec.)
 // User & Argument Errors (Negative)
+#define BPTR_E_FN_INPUT    (-1)
+#define BPTR_E_GT_MAXSIZE  (-2)
 /*---------------------------- Public Define END -----------------------------*/
 
 /*------------------------ Public Struct Declaration -------------------------*/
