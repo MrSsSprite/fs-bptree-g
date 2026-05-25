@@ -37,7 +37,8 @@ struct bptr_node
    uint16_t flags, level;
    uint32_t key_count, checksum;
    bptr_node_t parent, prev, next;
-   void *keys, *vals;
+   void *vals;
+   char keys[];
 };
 /*---------------------------- Public Structs END ----------------------------*/
 
