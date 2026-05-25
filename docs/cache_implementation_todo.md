@@ -23,9 +23,9 @@
 
 ### Step 4: Cache module (`src/bptr_cache.h` + `src/bptr_cache.c`)
 - [x] 4a. Create `src/bptr_cache.h`: define `struct cache_ht_entry`, `struct cache_pool_entry`, `struct bptr_cache` (with `free_head`), `CACHE_ENTRY_OF` macro, function declarations
-- [ ] 4b. Create `src/bptr_cache.c` with includes (`bptr_cache.h`, `bptr_node.h`, `bptr_io.h`, `<assert.h>`)
+- [x] 4b. Create `src/bptr_cache.c` with includes (`bptr_cache.h`, `bptr_node.h`, `bptr_io.h`)
 - [ ] 4c. Implement `next_power_of_two` helper
-- [ ] 4d. Implement `cache_hash` (Fibonacci multiplicative) and `probe_distance` helpers
+- [x] 4d. Implement `cache_hash` (Fibonacci multiplicative) and `probe_distance` helpers
 - [ ] 4e. Implement Robin Hood hash table: `ht_lookup`, `ht_insert` (with swap-on-probe), `ht_delete` (backward shift)
 - [ ] 4f. Implement FIFO eviction queue: `evict_queue_append`, `evict_queue_remove`, `evict_queue_pop` (handle empty/single/head/tail/middle)
 - [ ] 4g. Implement lazy free list: `POOL_ENTRY` macro, `free_list_pop` (with lazy init of trailing block), `free_list_push`
