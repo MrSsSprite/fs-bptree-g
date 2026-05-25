@@ -8,12 +8,16 @@
 /*------------------------------ Public Define -------------------------------*/
 #define BPTR_CURRENT_VERSION (0u)
 
+#define BPTR_CACHE_CAPACITY_MIN  (2u)
+
 // Error Codes
 #define BPTR_E_SUCCESS     (0)
 // Sytem & Program-side Errors (Positive)
 #define BPTR_E_OOM         (1)      // OOM: Out Of Memory
 #define BPTR_E_FACCESS     (2)      // File Access Error
 #define BPTR_E_FCLOSE      (3)      // Failed at fclose
+#define BPTR_E_ITRNL_STATE (4)      // Invalid Internal State of struct bptr
+#define BPTR_E_CACHE_FULL  (5)      // Cache pool full and no eviction possible
 #define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable (57005 dec.)
 #define BPTR_E_TODO        (0xBEEF) // Not yet implemented (48879 dec.)
 // User & Argument Errors (Negative)
