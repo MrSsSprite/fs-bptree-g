@@ -4,7 +4,15 @@
 #include "bptr_utils.h"
 #include "../external/data_structures/compat/bit_ops.h"
 #include <stdlib.h>
+#include <stddef.h>
 /*--------------------------- Public Includes END ----------------------------*/
+
+
+/*------------------------------ Private Macros ------------------------------*/
+#define CACHE_ENTRY_OF(node_p) \
+   ((strcut cache_pool_entry*) \
+    ((char*)(node_p) - offsetof(strcut cache_pool_entry, node)))
+/*---------------------------- Private Macros END ----------------------------*/
 
 
 /*----------------------------- Private Structs ------------------------------*/
