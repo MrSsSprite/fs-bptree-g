@@ -22,7 +22,7 @@
 - [x] 3a. Add `#define BPTR_CACHE_CAPACITY_MIN (2)` to `bptree.h`
 
 ### Step 4: Cache module (`src/bptr_cache.h` + `src/bptr_cache.c`)
-- [ ] 4a. Create `src/bptr_cache.h`: define `struct cache_ht_entry`, `struct cache_pool_entry`, `struct bptr_cache` (with `free_head`), `CACHE_ENTRY_OF` macro, function declarations
+- [x] 4a. Create `src/bptr_cache.h`: define `struct cache_ht_entry`, `struct cache_pool_entry`, `struct bptr_cache` (with `free_head`), `CACHE_ENTRY_OF` macro, function declarations
 - [ ] 4b. Create `src/bptr_cache.c` with includes (`bptr_cache.h`, `bptr_node.h`, `bptr_io.h`, `<assert.h>`)
 - [ ] 4c. Implement `next_power_of_two` helper
 - [ ] 4d. Implement `cache_hash` (Fibonacci multiplicative) and `probe_distance` helpers
