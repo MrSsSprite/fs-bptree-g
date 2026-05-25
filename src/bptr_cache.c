@@ -15,6 +15,12 @@
 /*---------------------------- Private Macros END ----------------------------*/
 
 
+/*---------------------- Private Function Declarations -----------------------*/
+static inline
+uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift);
+/*-------------------- Private Function Declarations END ---------------------*/
+
+
 /*----------------------------- Private Structs ------------------------------*/
 struct cache_ht_entry
 {
@@ -37,6 +43,7 @@ struct bptr_cache
 {
    struct cache_ht_entry *ht;
    uint64_t ht_cap;     // Hash table capacity, power of 2
+   uint_fast8_t hash_shift; // bit shift of hash table capacity
    struct cache_pool_entry *pool;
    uint64_t pool_sz;    // # of node cached in pool
    uint64_t pool_cap;   // Pool Capacity
@@ -76,6 +83,7 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
       if (cache->ht_cap & (uint64_t)1 << 63) goto SIZE_TOO_LARGE_ERR;
       cache->ht_cap <<= 1;
     }
+   cache->hash_shift = ds_clz(cache->ht_cap);
 
    cache->pool =
       malloc((sizeof(struct cache_pool_entry) + self->node_bound.buf_sz) *
@@ -138,3 +146,14 @@ int bptr_cache_deinit(struct bptr *self)
    return 0;
 }
 /*--------------------------- Public Functions END ---------------------------*/
+
+
+/*---------------------------- Private Functions -----------------------------*/
+static inline
+uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift)
+{
+#define HASH_MULTIPLIER 11400714819323198485ULL
+   return (node_idx * HASH_MULTIPLIER) >> shift;
+#undef HASH_MULTIPLIER
+}
+/*-------------------------- Private Functions END ---------------------------*/
