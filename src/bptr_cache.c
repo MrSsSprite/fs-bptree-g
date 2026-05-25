@@ -26,12 +26,12 @@ struct cache_ht_entry
 {
    bptr_node_t node_idx;   // 0 = Empty
    uint64_t    pool_idx;   // index into pool
+   uint64_t PSL;           // Probe Sequence Length for Robin Hood Probing
 };
 
 struct cache_pool_entry
 {
    uint16_t refcnt;  // 0:EMPTY, 1:INACTIVE, >=2:ACTIVE
-   uint64_t PSL;
    // pool[] index; index of self if head/tail
    // evict_next points to next free block if EMPTY;
    // or, 0 if every subsequent entry are free
