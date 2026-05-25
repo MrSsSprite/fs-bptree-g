@@ -53,6 +53,8 @@ struct bptr
    FILE *file;
    void *fbuf;
 
+   struct bptr_cache *cache;
+
    /* ファイル識別情報 */
    uint_least32_t version;
    _Bool is_lite;
