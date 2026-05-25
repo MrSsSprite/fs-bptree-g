@@ -195,33 +195,33 @@ pool = calloc(capacity, entry_size);
 
 Indexing: `entry_at(i) = (struct cache_pool_entry *)((char*)pool + i * entry_size)`.
 
+`evict_next` points to next free block if EMPTY, or 0 if every subsequent entry
+are free.  This program adopt lazy approach, in the trailing huge free block,
+only the first free entry's `evict_next` is initialized. Next free block needs
+to be initialized when the first free entry in the free block is claimed.
+
 On eviction nothing is individually freed — the keys[] and vals data dies with the pool slot.
 
-### No-cache path
+### Caching is compulsory
 
-The flex-array change also simplifies the non-cache allocation path. `_node_kv_malloc` is replaced by a single `calloc`/`malloc` with the total size, plus a `vals` repoint:
-
-- `bptr_node_new`: `calloc(1, sizeof(struct bptr_node) + node_buf_sz)` replaces `calloc(sizeof(struct bptr_node))` + `_node_kv_malloc`
-- `bptr_node_load` (fallback): `malloc(sizeof(struct bptr_node) + node_buf_sz)` replaces `malloc(sizeof(struct bptr_node))` + `_node_kv_malloc`
-
-`_node_kv_malloc` is removed entirely. `bptr_node_free` becomes just `free(node)` — the single allocation covers everything.
+There is no cacheless fallback. `_node_kv_malloc` is removed — every node allocation goes through the cache pool, which provides the inline `keys[]` + `vals` buffer. `bptr_node_free` becomes just `free(node)` — the single allocation covers everything.
 
 ### `struct bptr` additions (`src/bptr_internal.h`)
 
 ```c
-uint32_t          cache_capacity;  // 0 = no cache; number of pool slots
+uint32_t          cache_capacity;  // number of pool slots
 uint32_t          node_buf_sz;     // extra bytes beyond sizeof(bptr_node) for keys+vals
 struct bptr_cache *cache;
 ```
 
-`cache_capacity` represents the node cache space only. `node_buf_sz` is computed at init/load time from `node_bound` and used by both cache and no-cache allocation paths. The hash table and bookkeeping add further overhead beyond what `cache_capacity` accounts for.
+`cache_capacity` represents the node cache space only. `node_buf_sz` is computed at init/load time from `node_bound` and used for all node allocations. The hash table and bookkeeping add further overhead beyond what `cache_capacity` accounts for.
 
 ## New and Changed API
 
 ### Public (`bptree.h`)
 
 - `bptr_init` and `bptr_load` gain a `uint32_t cache_capacity` parameter.
-- `cache_capacity = 0` disables caching — all node operations fall through to the original malloc/free behaviour.
+- `cache_capacity` must be ≥ 1. Caching is compulsory.
 - New error code: `BPTR_E_CACHE_FULL` — returned when the cache pool is full and every slot has refcount ≥ 2.
 
 ### New cache module (`src/bptr_cache.h` / `src/bptr_cache.c`)
@@ -237,12 +237,12 @@ struct bptr_cache *cache;
 
 ### Node API changes (`src/bptr_node.h` / `src/bptr_node.c`)
 
-- **`bptr_node_load`** — thin wrapper: cache → `bptr_cache_fetch`; no-cache → `malloc(sizeof(bptr_node) + node_buf_sz)`, repoint vals, fread, unmarshal.
-- **`bptr_node_unload`** — thin wrapper: cache → `bptr_cache_release`; no-cache → flush (if dirty) + `free(node)` (single free — keys[] inline, no separate allocations).
+- **`bptr_node_load`** — calls `bptr_cache_fetch`.
+- **`bptr_node_unload`** — calls `bptr_cache_release`.
 - **`bptr_node_new`** — restructured (see below).
 - **`bptr_node_flush`** — unchanged: marshal to fbuf, write to disk, node stays cached.
-- **`bptr_node_evict`** — **new**: calls `bptr_cache_evict` (no-cache mode: `free(node)`). Precondition: node must be INACTIVE (refcount == 1).
-- **`bptr_node_free`** — simplified to `free(node)` only. With flex-array keys the entire node is one allocation; no separate `free(keys)`/`free(vals)`.
+- **`bptr_node_evict`** — **new**: calls `bptr_cache_evict`. Precondition: node must be INACTIVE (refcount == 1).
+- **`bptr_node_free`** — simplified to `free(node)` only. With flex-array keys the entire node is one allocation.
 - **`_node_kv_malloc`** — **removed**. Replaced by `vals = keys + max_key_bytes` pointer repoint after allocation.
 - **`bptr_node_marshal` / `bptr_node_unmarshal`** — made non-static. Unmarshal reads into the inline `node.keys[]` and the repointed `node.vals`; both targets live in the single allocation.
 - **`bptr_node_vacate`** — refactored: new `bptr_node_vacate_idx(self, node_idx)` helper taking a raw node index.
@@ -256,7 +256,7 @@ Disk preallocation must happen before `bptr_cache_alloc` because the cache slot 
 2. Load parent, read level, unload parent    → determines is_leaf
 3. bptr_cache_alloc(self, node_idx)         → pool slot, refcount=2, inserted in hash table
 4. Set fields: level, flags, is_leaf, is_dirty=1, key_count=0, parent, node_idx
-5. Repoint node->vals into the inline keys[] tail (cache path: already sized; no-cache: same allocation)
+5. Repoint node->vals into the inline keys[] tail
 6. Return node
 
 Error path: bptr_node_unload + bptr_node_evict + bptr_node_vacate_idx
@@ -281,7 +281,6 @@ Step order matters: prealloc uses `self->fbuf` for free-list I/O. Parent load/un
 | `bptr_node_unload` on an ACTIVE node | refcount−−; if refcount becomes 1, append to FIFO queue |
 | `bptr_node_new` fails after prealloc + cache_alloc | Unload (2→1) + evict (1→0) + vacate disk space |
 | `bptr_unload` with dirty cached nodes | `bptr_cache_destroy` iterates all pool slots, flushes if dirty, frees all |
-| `cache_capacity == 0` | All functions use original malloc/free path; zero behavioural difference |
 | Explicit `bptr_node_evict` on a dirty node | Changes are dropped (caller should flush first if persistence matters) |
 | `bptr_node_evict` on an ACTIVE node (refcount≥2) | Logic error — precondition violated. Assert/return error. |
 
@@ -291,7 +290,7 @@ The split branch calls `load`/`unload` multiple times (load parent, load sibling
 
 ## Implementation Order
 
-1. **Flex-array keys** — change `struct bptr_node` in `bptr_node.h`: replace `void *keys, *vals` with `void *vals; unsigned char keys[]`. Remove `_node_kv_malloc` macro. Simplify `bptr_node_free` to single `free(node)`. Update `bptr_node_new` and `bptr_node_load` no-cache paths to allocate `sizeof(struct bptr_node) + node_buf_sz` and repoint `vals` into the keys[] tail. Remove NULL checks on `keys`.
+1. **Flex-array keys** — change `struct bptr_node` in `bptr_node.h`: replace `void *keys, *vals` with `void *vals; unsigned char keys[]`. Remove `_node_kv_malloc` macro. Simplify `bptr_node_free` to single `free(node)`. Node allocation becomes `sizeof(struct bptr_node) + node_buf_sz` with `vals` repointed into the keys[] tail. Remove NULL checks on `keys`.
 2. **Struct fields** — add `cache_capacity`, `node_buf_sz`, and `cache` to `struct bptr` in `bptr_internal.h`
 3. **Error code** — add `BPTR_E_CACHE_FULL` to `bptree.h`
 4. **Cache module** — create `src/bptr_cache.h` and `src/bptr_cache.c`:
@@ -300,7 +299,7 @@ The split branch calls `load`/`unload` multiple times (load parent, load sibling
    - `bptr_cache_init` / `bptr_cache_destroy`
    - `bptr_cache_fetch` / `bptr_cache_release` / `bptr_cache_alloc` / `bptr_cache_evict`
 5. **Expose internals** — declare `bptr_node_marshal`, `bptr_node_unmarshal`, `bptr_node_vacate_idx` in `bptr_node.h`
-6. **Rewrite node layer** — add cache/no-cache branches to load/unload/new; add `bptr_node_evict`; refactor vacate; make marshal/unmarshal non-static
+6. **Rewrite node layer** — rewrite load/unload/new to call cache functions; add `bptr_node_evict`; refactor vacate; make marshal/unmarshal non-static
 7. **Wire up core** — init/load compute `node_buf_sz` and call `bptr_cache_init`; unload calls `bptr_cache_destroy`; update signatures
 8. **Update public API** — add `cache_capacity` param to `bptr_init` and `bptr_load` declarations
 9. **Cleanup** — remove stale `TODO: involve cache mechanism` comments
