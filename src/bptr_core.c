@@ -129,6 +129,16 @@ struct bptr *bptr_load(const char *filename,
     }
    _bptr_bound_set(self);
    self->compare = compare;
+   {
+      size_t leaf_storage =
+         (self->node_bound.leaf.up - 1) * self->key_size +
+         (self->node_bound.leaf.up - 1) * self->value_size;
+      size_t brch_storage =
+         (self->node_bound.brch.up - 1) * self->key_size +
+         self->node_bound.brch.up * BPTR_PTR_SIZE;
+      self->node_bound.buf_sz =
+         (leaf_storage > brch_storage ? leaf_storage : brch_storage);
+   }
 
    return self;
 
