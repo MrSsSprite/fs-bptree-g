@@ -3,7 +3,7 @@
 ## Checklist
 
 ### Step 1: Flex-array keys (struct change + transitional allocation)
-- [ ] 1a. Change `struct bptr_node` in `src/bptr_node.h`: replace `void *keys, *vals` with `void *vals; unsigned char keys[]`
+- [x] 1a. Change `struct bptr_node` in `src/bptr_node.h`: replace `void *keys, *vals` with `void *vals; unsigned char keys[]`
 - [ ] 1b. Adapt `_node_kv_malloc` in `src/bptr_node.c`: repoint `vals` into `keys[]` tail instead of malloc (transitional — do NOT remove yet)
 - [ ] 1c. Update `bptr_node_new` allocation: `calloc(1, sizeof(struct bptr_node) + self->node_bound.buf_sz)`
 - [ ] 1d. Update `bptr_node_load` allocation: `malloc(sizeof(struct bptr_node) + self->node_bound.buf_sz)`
@@ -12,14 +12,14 @@
 - [ ] 1g. Remove any NULL checks on `node->keys` (flex array is never NULL)
 
 ### Step 2: Add cache-related fields to `struct bptr` + compute `node_buf_sz`
-- [ ] 2a. Forward-declare `struct bptr_cache` in `src/bptr_internal.h`
-- [ ] 2b. Add `cache_capacity`, `node_buf_sz`, `cache` fields to `struct bptr` in `src/bptr_internal.h`
-- [ ] 2c. Compute `node_buf_sz` in `bptr_init` (using plan's overflow-inclusive formulas: `leaf.up`, `brch.up+1`)
-- [ ] 2d. Compute `node_buf_sz` in `bptr_load` (same formulas as 2c)
-- [ ] 2e. Add `#define BPTR_E_CACHE_FULL (4)` to `bptree.h`
+- [x] 2a. Forward-declare `struct bptr_cache` in `src/bptr_internal.h`
+- [x] 2b. Add `node_buf_sz`, `cache` fields to `struct bptr` in `src/bptr_internal.h`
+- [x] 2c. Compute `node_buf_sz` in `bptr_init` (using plan's overflow-inclusive formulas: `leaf.up`, `brch.up+1`)
+- [x] 2d. Compute `node_buf_sz` in `bptr_load` (same formulas as 2c)
+- [x] 2e. Add `#define BPTR_E_CACHE_FULL (5)` to `bptree.h`
 
 ### Step 3: Error code + min capacity constant
-- [ ] 3a. Add `#define BPTR_CACHE_CAPACITY_MIN (2)` to `bptree.h`
+- [x] 3a. Add `#define BPTR_CACHE_CAPACITY_MIN (2)` to `bptree.h`
 
 ### Step 4: Cache module (`src/bptr_cache.h` + `src/bptr_cache.c`)
 - [ ] 4a. Create `src/bptr_cache.h`: define `struct cache_ht_entry`, `struct cache_pool_entry`, `struct bptr_cache` (with `free_head`), `CACHE_ENTRY_OF` macro, function declarations
