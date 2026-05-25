@@ -42,12 +42,12 @@ struct cache_pool_entry
 struct bptr_cache
 {
    struct cache_ht_entry *ht;
-   uint64_t ht_cap;     // Hash table capacity, power of 2
+   uint64_t ht_cap;         // Hash table capacity, power of 2
    uint_fast8_t hash_shift; // bit shift of hash table capacity
    struct cache_pool_entry *pool;
-   uint64_t pool_sz;    // # of node cached in pool
-   uint64_t pool_cap;   // Pool Capacity
-   uint64_t pool_free;  // pool[] index; points to first free block
+   uint64_t pool_sz;        // # of node cached in pool
+   uint64_t pool_cap;       // Pool Capacity
+   uint64_t pool_free;      // pool[] index; points to first free block
    // head points to non-INACTIVE (but valid) node if empty
    uint64_t evict_head, evict_tail;
 };
