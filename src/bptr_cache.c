@@ -51,6 +51,10 @@ struct bptr_cache
    // head points to non-INACTIVE (but valid) node if empty
    uint64_t evict_head, evict_tail;
 };
+
+
+struct ht_lookup_res
+{ uint64_t pool_idx, PSL; };
 /*--------------------------- Private Structs END ----------------------------*/
 
 
@@ -155,5 +159,37 @@ uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift)
 #define HASH_MULTIPLIER 11400714819323198485ULL
    return (node_idx * HASH_MULTIPLIER) >> shift;
 #undef HASH_MULTIPLIER
+}
+
+
+static
+struct ht_lookup_res ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx)
+{
+   struct ht_lookup_res ret;
+   uint64_t idx = fibonacci_hash_u64(node_idx, cache->hash_shift);
+
+   bptr_errno = 0;
+   ret.PSL = 0;
+   while (cache->ht[idx].node_idx)
+    {
+      if (cache->ht[idx].PSL < ret.PSL)
+       {
+         bptr_errno = BPTR_E_NOT_FOUND;
+         ret.pool_idx = cache->ht[idx].pool_idx;
+         return ret;
+       }
+      if (cache->ht[idx].node_idx == node_idx)
+       {
+         ret.pool_idx = cache->ht[idx].pool_idx;
+         return ret;
+       }
+
+      idx = (idx + 1) & ~(cache->ht_cap);
+      ret.PSL++;
+    }
+
+   bptr_errno = BPTR_E_NOT_FOUND;
+   ret.pool_idx = cache->ht[idx].pool_idx;
+   return ret;
 }
 /*-------------------------- Private Functions END ---------------------------*/
