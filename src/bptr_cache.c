@@ -215,4 +215,23 @@ int ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx)
 
    return BPTR_E_UNREACHABLE;
 }
+
+
+static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx)
+{
+   uint64_t idx = ht_lookup(cache, node_idx);
+   struct cache_ht_entry *ht_en;
+
+   if (bptr_errno) return; // not found
+
+   while (1)
+    {
+      uint64_t next = (idx + 1) & ~(cache->ht_cap);
+      ht_en = cache->ht + next;
+      if (ht_en->node_idx == 0 || ht_en->PSL == 0) break;
+      cache->ht[idx] = cache->ht[next];
+      idx = next;
+    }
+   cache->ht[idx].node_idx = 0;
+}
 /*-------------------------- Private Functions END ---------------------------*/
