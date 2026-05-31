@@ -101,6 +101,7 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
       cache->ht[i].node_idx = 0;
    for (uint64_t i = 0; i < cache->pool_cap; i++)
       cache->pool[i].refcnt = 0;
+   // Entire block of memory free
    cache->pool[0].evict_next = 0;
 
    self->cache = cache;
@@ -287,5 +288,41 @@ static uint64_t evict_pop(struct bptr_cache *cache)
 
    evict_remove(cache, ret);
    return ret;
+}
+
+
+// This function increments cache->pool_sz on success
+static uint64_t pool_free_pop(struct bptr_cache *cache)
+{
+   uint64_t pool_idx = cache->pool_free;
+   struct cache_pool_entry *pool_en = cache->pool + pool_idx;
+
+   if (cache->pool_sz++ >= cache->pool_cap)
+    {
+      cache->pool_sz--;
+      bptr_errno = BPTR_E_CACHE_FULL;
+      return cache->pool_cap;
+    }
+
+   if (pool_en->evict_next == 0) // Trailing free block
+    {
+      // Logically, if following cond is true, pool_en is the last free block
+      if (pool_idx + 1 < cache->pool_cap)
+         pool_en[1].evict_next = 0;
+      cache->pool_free++;
+    }
+   else
+      cache->pool_free = pool_en->evict_next;
+
+   return pool_idx;
+}
+
+
+// This function decrements cache->pool_sz on success
+static void pool_free_push(struct bptr_cache *cache, uint64_t pool_idx)
+{
+   cache->pool[pool_idx].evict_next = cache->pool_free;
+   cache->pool_free = pool_idx;
+   cache->pool_sz--;
 }
 /*-------------------------- Private Functions END ---------------------------*/
