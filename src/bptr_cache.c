@@ -34,7 +34,7 @@ struct cache_pool_entry
    uint16_t refcnt;  // 0:EMPTY, 1:INACTIVE, >=2:ACTIVE
    // pool[] index; sentinel: index of self if head/tail
    // evict_next points to next free block if EMPTY;
-   // or, 0 if every subsequent entry are free
+   // or, 0 if every subsequent entry is free
    uint64_t evict_prev, evict_next;
    struct bptr_node node;
 };
