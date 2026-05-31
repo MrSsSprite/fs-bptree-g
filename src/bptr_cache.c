@@ -32,7 +32,7 @@ struct cache_ht_entry
 struct cache_pool_entry
 {
    uint16_t refcnt;  // 0:EMPTY, 1:INACTIVE, >=2:ACTIVE
-   // pool[] index; index of self if head/tail
+   // pool[] index; sentinel: index of self if head/tail
    // evict_next points to next free block if EMPTY;
    // or, 0 if every subsequent entry are free
    uint64_t evict_prev, evict_next;
@@ -233,5 +233,59 @@ static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx)
       idx = next;
     }
    cache->ht[idx].node_idx = 0;
+}
+
+
+static void evict_push(struct bptr_cache *cache, uint64_t pool_idx)
+{
+   struct cache_pool_entry *pool_en = cache->pool + pool_idx;
+
+   pool_en->evict_next = pool_idx;  // self == sentinel value
+   if (cache->pool[cache->evict_head].refcnt != 1) // if empty
+    {
+      pool_en->evict_prev = cache->evict_head = cache->evict_tail = pool_idx;
+      return;
+    }
+   pool_en->evict_prev = cache->evict_tail;
+   cache->evict_tail = pool_idx;
+}
+
+
+// Caller should set refcnt to any non-1 value; otherwise, it leads to
+// undefined behavior after removing last element from eviction list
+static void evict_remove(struct bptr_cache *cache, uint64_t pool_idx)
+{
+   struct cache_pool_entry *pool_en = cache->pool + pool_idx;
+   _Bool is_head = pool_en->evict_prev == pool_idx,
+         is_tail = pool_en->evict_next == pool_idx;
+
+   if (is_head)
+      cache->evict_head = pool_en->evict_next;
+   else
+      cache->pool[pool_en->evict_prev].evict_next =
+         is_tail ? pool_en->evict_prev : pool_en->evict_next;
+
+   if (is_tail)
+      cache->evict_tail = pool_en->evict_prev;
+   else
+      cache->pool[pool_en->evict_next].evict_prev =
+         is_head ? pool_en->evict_next : pool_en->evict_prev;
+}
+
+
+// Return oldest unloaded entry for eviction
+// Caller should set refcnt to any non-1 value; otherwise, it leads to
+// undefined behavior after removing last element from eviction list
+static uint64_t evict_pop(struct bptr_cache *cache)
+{
+   uint64_t ret = cache->evict_head;
+
+   bptr_errno = 0;
+
+   if (cache->pool[ret].refcnt != 1)
+    { bptr_errno = BPTR_E_NOT_FOUND; return 0; }
+
+   evict_remove(cache, ret);
+   return ret;
 }
 /*-------------------------- Private Functions END ---------------------------*/

@@ -27,7 +27,7 @@
 - [ ] 4c. Implement `next_power_of_two` helper
 - [x] 4d. Implement `cache_hash` (Fibonacci multiplicative) and `probe_distance` helpers
 - [x] 4e. Implement Robin Hood hash table: `ht_lookup`, `ht_insert` (with swap-on-probe), `ht_delete` (backward shift)
-- [ ] 4f. Implement FIFO eviction queue: `evict_queue_append`, `evict_queue_remove`, `evict_queue_pop` (handle empty/single/head/tail/middle)
+- [x] 4f. Implement FIFO eviction queue: `evict_queue_append`, `evict_queue_remove`, `evict_queue_pop` (handle empty/single/head/tail/middle)
 - [ ] 4g. Implement lazy free list: `POOL_ENTRY` macro, `free_list_pop` (with lazy init of trailing block), `free_list_push`
 - [ ] 4h. Implement `bptr_cache_init`: allocate ht (2× capacity, next power of 2) and pool, init free_head=0, evict_head/tail=-1
 - [ ] 4i. Implement `bptr_cache_destroy`: iterate pool, flush dirty, free ht+pool, assert no active refcount
