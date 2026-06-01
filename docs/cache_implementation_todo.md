@@ -31,7 +31,7 @@
 - [x] 4g. Implement lazy free list: `POOL_ENTRY` macro, `free_list_pop` (with lazy init of trailing block), `free_list_push`
 - [x] 4h. Implement `bptr_cache_init`: allocate ht (2× capacity, next power of 2) and pool, init free_head=0, evict_head/tail=-1
 - [x] 4i. Implement `bptr_cache_deinit`: iterate pool, flush dirty, free ht+pool, assert no active refcount
-- [ ] 4j. Implement `bptr_cache_fetch`: hash lookup → hit(refcount++, dequeue if was 1) / miss(find slot, evict if needed, flush dirty victim, fread, unmarshal, ht_insert, refcount=2). Handle flush failure (return victim to queue).
+- [x] 4j. Implement `bptr_cache_fetch`: hash lookup → hit(refcount++, dequeue if was 1) / miss(find slot, evict if needed, flush dirty victim, fread, unmarshal, ht_insert, refcount=2). Handle flush failure (return victim to queue).
 - [ ] 4k. Implement `bptr_cache_release`: assert refcount>=2, decrement, if becomes 1 append to eviction queue; add `pool_idx_of` helper
 - [ ] 4l. Implement `bptr_cache_alloc`: find slot/evict, zero node, refcount=2, ht_insert; same eviction+flush logic as fetch
 - [ ] 4m. Implement `bptr_cache_evict`: assert refcount==1, dequeue, ht_delete, free_list_push. Does NOT flush.

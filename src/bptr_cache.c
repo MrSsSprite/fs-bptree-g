@@ -18,6 +18,15 @@
 /*---------------------- Private Function Declarations -----------------------*/
 static inline
 uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift);
+static
+uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx);
+static void ht_insert
+ (struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx);
+static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx);
+static void evict_push(struct bptr_cache *cache, uint64_t pool_idx);
+static uint64_t evict_pop(struct bptr_cache *cache);
+static void evict_remove(struct bptr_cache *cache, uint64_t pool_idx);
+static uint64_t pool_free_pop(struct bptr_cache *cache);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -145,6 +154,67 @@ int bptr_cache_deinit(struct bptr *self)
    self->cache = NULL;
 
    return 0;
+}
+
+
+struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
+{
+   struct bptr_cache *cache = self->cache;
+   struct cache_pool_entry *pool_en;
+   uint64_t pool_idx;
+   int fn_err;
+
+   if (node_idx == 0) { bptr_errno = BPTR_E_FN_INPUT; return NULL; }
+
+   pool_idx = ht_lookup(cache, node_idx);
+   if (pool_idx < cache->pool_cap)  // cache HIT
+    {
+      pool_en = cache->pool + pool_idx;
+      if (pool_en->refcnt == 1)
+         evict_remove(cache, pool_idx);
+      pool_en->refcnt++;
+      return &pool_en->node;
+    }
+
+   // Cache MISS
+   pool_idx = pool_free_pop(cache);
+   if (pool_idx < cache->pool_cap)  // No Free Slot
+    {
+      struct cache_pool_entry *victim_en;
+
+      // Get thru Eviction
+      pool_idx = evict_pop(cache);
+      if (bptr_errno) goto EVICT_ERR;
+
+      victim_en = cache->pool + pool_idx;
+      if (victim_en->node.is_dirty)
+       {
+         if (bptr_node_flush(self, &victim_en->node) == 0)
+          { goto NODE_FLUSH_ERR; }
+       }
+
+      ht_delete(cache, victim_en->node.node_idx);
+      victim_en->refcnt = 0;
+    }
+
+   pool_en = cache->pool + pool_idx;
+   fn_err = bptr_node_load(self, node_idx, &pool_en->node);
+   if (fn_err) goto NODE_LOAD_ERR;
+
+   pool_en->refcnt = 2;
+
+   ht_insert(cache, node_idx, pool_idx);
+
+   return &pool_en->node;
+
+   /*-------------------------- Error Handling Area --------------------------*/
+   _Bool has_set_err = 0;
+
+NODE_FLUSH_ERR: _set_errno(BPTR_E_FACCESS);
+   evict_push(cache, pool_idx);
+NODE_LOAD_ERR:  _set_errno(fn_err);
+EVICT_ERR:      _set_errno(BPTR_E_CACHE_FULL);
+   return NULL;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
