@@ -162,29 +162,24 @@ uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift)
 static
 uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx)
 {
+   struct cache_ht_entry *ht_en;
    uint64_t psl;
    uint64_t idx = fibonacci_hash_u64(node_idx, cache->hash_shift);
 
-   bptr_errno = 0;
    psl = 0;
-   while (cache->ht[idx].node_idx)
+   ht_en = cache->ht + idx;
+   while (ht_en->node_idx)
     {
-      if (cache->ht[idx].PSL < psl)
-       {
-         bptr_errno = BPTR_E_NOT_FOUND;
-         return cache->ht[idx].pool_idx;
-       }
-      if (cache->ht[idx].node_idx == node_idx)
-       {
-         return cache->ht[idx].pool_idx;
-       }
+      if (ht_en->PSL < psl)
+         return cache->pool_cap;
+      if (ht_en->node_idx == node_idx)
+         return ht_en->pool_idx;
 
       idx = (idx + 1) & ~(cache->ht_cap);
       psl++;
     }
 
-   bptr_errno = BPTR_E_NOT_FOUND;
-   return cache->ht[idx].pool_idx;
+   return cache->pool_cap;
 }
 
 
@@ -223,7 +218,7 @@ static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx)
    uint64_t idx = ht_lookup(cache, node_idx);
    struct cache_ht_entry *ht_en;
 
-   if (bptr_errno) return; // not found
+   if (idx == cache->pool_cap) return; // not found
 
    while (1)
     {
