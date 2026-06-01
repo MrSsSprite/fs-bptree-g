@@ -185,7 +185,7 @@ uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx)
 
 // Caller is responsible of checking that it's valid to insert into the ht
 static
-int ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx)
+void ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx)
 {
    struct cache_ht_entry cur = { .node_idx = node_idx, .pool_idx = pool_idx, 0 };
    uint64_t idx = fibonacci_hash_u64(cur.node_idx, cache->hash_shift);
@@ -196,7 +196,7 @@ int ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx)
       ht_en = cache->ht + idx;
 
       if (ht_en->node_idx == 0)
-       { *ht_en = cur; return 0; }
+       { *ht_en = cur; return; }
 
       if (cur.PSL > ht_en->PSL)
        {
@@ -208,8 +208,6 @@ int ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx)
       idx = (idx + 1) & ~(cache->ht_cap);
       cur.PSL++;
     }
-
-   return BPTR_E_UNREACHABLE;
 }
 
 
