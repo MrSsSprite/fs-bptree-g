@@ -216,6 +216,17 @@ NODE_LOAD_ERR:  _set_errno(fn_err);
 EVICT_ERR:      _set_errno(BPTR_E_CACHE_FULL);
    return NULL;
 }
+
+
+// Caller is responsible of ensuring that it's valid to relese `node`
+void bptr_cache_release(struct bptr *self, struct bptr_node *node)
+{
+   struct bptr_cache *cache = self->cache;
+   struct cache_pool_entry *pool_en = CACHE_ENTRY_OF(node);
+
+   if (--pool_en->refcnt == 1)
+      evict_push(cache, pool_en - cache->pool);
+}
 /*--------------------------- Public Functions END ---------------------------*/
 
 
