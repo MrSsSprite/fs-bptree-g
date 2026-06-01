@@ -2,6 +2,7 @@
 #include "bptr_node.h"
 #include "bptr_internal.h"
 #include "bptr_io.h"
+#include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
 /*--------------------------- Private Includes END ---------------------------*/
@@ -93,9 +94,6 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
  *
  * @param[in,out] self  bptr obj.
  * @param[out]    node  node obj. to hold the deserialized data
- * @return        error code
- * @retval  0     success
- * @retval  1     malloc error
  *
  * @warning    This function allocates memory for node->keys and node->vals;
  *             thence, these two members should not have exclusive ownership
@@ -105,7 +103,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
  *             adopted as it's shorter.
  */
 static inline
-int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
+void bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   preallocate node-sized space in file
  *
@@ -297,39 +295,27 @@ int bptr_node_unload(struct bptr *self, struct bptr_node *node)
 }
 
 
-struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx)
+int bptr_node_load
+ (struct bptr *self, bptr_node_t node_idx, struct bptr_node *node)
 {
-   struct bptr_node *node;
-
-   node = malloc(sizeof(struct bptr_node));
    if (node == NULL)
-    {
-      bptr_errno = 1;
-      goto NODE_MALLOC_ERR;
-    }
+      goto INVALID_NODE;
 
    // Read into fbuf
    if (bptr_io_fread_node(self, node_idx))
-    {
-      bptr_errno = -1;
       goto FREAD_NODE_ERR;
-    }
 
-   if (bptr_node_unmarshal(self, node))
-    {
-      bptr_errno = 1;
-      goto UNMARSHAL_ERR;
-    }
-   node->is_dirty = 0;
+   bptr_node_unmarshal(self, node);
    node->node_idx = node_idx;
 
-   return node;
+   return 0;
 
-UNMARSHAL_ERR:
-FREAD_NODE_ERR:
-   free(node);
-NODE_MALLOC_ERR:
-   return NULL;
+   /*-------------------------- Error Handling Area --------------------------*/
+   int err_code;
+   _Bool has_set_err = 0;
+FREAD_NODE_ERR:   _set_err_code(BPTR_E_FACCESS);
+INVALID_NODE:     _set_err_code(BPTR_E_FN_INPUT);
+   return err_code;
 }
 
 
@@ -369,7 +355,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 
 
 static inline
-int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
+void bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
 
@@ -389,17 +375,9 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 
    node->is_leaf = (node->level == 0);
    node->is_dirty = 0;
-   _node_kv_malloc(self, node);
-   if (node->keys == NULL || node->vals == NULL)
-    {
-      free(node->keys); free(node->vals);
-      return 1;
-    }
    iter_read(buf_it, node->keys,
             self->key_size * node->key_count);
    iter_read(buf_it, node->vals, _node_val_arr_size(self, node));
-
-   return 0;
 }
 
 static
