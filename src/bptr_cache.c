@@ -10,8 +10,8 @@
 
 /*------------------------------ Private Macros ------------------------------*/
 #define CACHE_ENTRY_OF(node_p) \
-   ((strcut cache_pool_entry*) \
-    ((char*)(node_p) - offsetof(strcut cache_pool_entry, node)))
+   ((struct cache_pool_entry*) \
+    ((char*)(node_p) - offsetof(struct cache_pool_entry, node)))
 /*---------------------------- Private Macros END ----------------------------*/
 
 
