@@ -178,7 +178,7 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
 
    // Cache MISS
    pool_idx = pool_free_pop(cache);
-   if (pool_idx < cache->pool_cap)  // No Free Slot
+   if (pool_idx == cache->pool_cap)  // No Free Slot
     {
       struct cache_pool_entry *victim_en;
 
