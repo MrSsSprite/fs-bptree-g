@@ -27,6 +27,7 @@ static void evict_push(struct bptr_cache *cache, uint64_t pool_idx);
 static uint64_t evict_pop(struct bptr_cache *cache);
 static void evict_remove(struct bptr_cache *cache, uint64_t pool_idx);
 static uint64_t pool_free_pop(struct bptr_cache *cache);
+static void pool_free_push(struct bptr_cache *cache, uint64_t pool_idx);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -213,6 +214,52 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
 NODE_LOAD_ERR:  _set_errno(fn_err);
    pool_free_push(cache, pool_idx); // return to free pool even from eviction
    if (0)   // enter only on jump
+    {
+NODE_FLUSH_ERR: _set_errno(BPTR_E_FACCESS);
+      evict_push(cache, pool_idx);
+EVICT_ERR:      _set_errno(BPTR_E_CACHE_FULL);
+    }
+   return NULL;
+}
+
+
+// This function does not update ht as node_idx is not known yet.
+struct bptr_node *bptr_cache_alloc(struct bptr *self, bptr_node_t node_idx)
+{
+   struct bptr_cache *cache = self->cache;
+   struct cache_pool_entry *pool_en;
+   uint64_t pool_idx;
+   int fn_err;
+
+   pool_idx = pool_free_pop(cache);
+   if (pool_idx == cache->pool_cap)  // No Free Slot
+    {
+      struct cache_pool_entry *victim_en;
+
+      // Get thru Eviction
+      pool_idx = evict_pop(cache);
+      if (bptr_errno) goto EVICT_ERR;
+
+      victim_en = cache->pool + pool_idx;
+      if (victim_en->node.is_dirty)
+       {
+         if (bptr_node_flush(self, &victim_en->node) == 0)
+          { goto NODE_FLUSH_ERR; }
+       }
+
+      ht_delete(cache, victim_en->node.node_idx);
+      victim_en->refcnt = 0;
+    }
+
+   pool_en = cache->pool + pool_idx;
+   pool_en->refcnt = 2;
+   ht_insert(cache, node_idx, pool_idx);
+   return &pool_en->node;
+
+   /*-------------------------- Error Handling Area --------------------------*/
+   _Bool has_set_err = 0;
+
+   if (0)   // enters only on jump
     {
 NODE_FLUSH_ERR: _set_errno(BPTR_E_FACCESS);
       evict_push(cache, pool_idx);
