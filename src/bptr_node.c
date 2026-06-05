@@ -2,6 +2,7 @@
 #include "bptr_node.h"
 #include "bptr_internal.h"
 #include "bptr_io.h"
+#include "bptr_cache.h"
 #include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
@@ -283,16 +284,8 @@ void bptr_node_free(struct bptr_node *node)
 }
 
 
-int bptr_node_unload(struct bptr *self, struct bptr_node *node)
-{
-   // TODO: checksum; below is merely temporary placeholder
-   node->checksum = 0;
-   //TODO: involve cache mechanism
-   if (node->is_dirty && bptr_node_flush(self, node) == 0)
-      return 2;
-   bptr_node_free(node);
-   return 0;
-}
+void bptr_node_unload(struct bptr *self, struct bptr_node *node)
+{ bptr_cache_release(self, node); }
 
 
 int bptr_node_load

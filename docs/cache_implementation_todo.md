@@ -43,8 +43,8 @@
 - [ ] 5d. Refactor `bptr_node_vacate(self, node)` as one-line wrapper calling `bptr_node_vacate_idx`
 
 ### Step 6: Rewrite node layer (load, unload, new, evict)
-- [ ] 6a. Rewrite `bptr_node_load` → one-liner calling `bptr_cache_fetch(self, node_idx)`
-- [ ] 6b. Rewrite `bptr_node_unload` → flush-if-dirty, then `bptr_cache_release(self, node)`
+- [x] 6a. Rewrite `bptr_node_load` →  load into a specifc address
+- [x] 6b. Rewrite `bptr_node_unload` →  oneliner that calls `bptr_cache_release`
 - [ ] 6c. Rewrite `bptr_node_new` → restructured flow: prealloc → load parent (determine level) → unload parent → `bptr_cache_alloc` → set fields → repoint `vals`. Error paths: `CACHE_ALLOC_ERR` (vacate disk, no unload/evict needed), `LOAD_PARENT_ERR` (vacate disk)
 - [ ] 6d. Update `bptr_node_unmarshal`: remove `_node_kv_malloc` call; repoint `vals = keys + key_size * (is_leaf ? leaf.up : brch.up)` after reading level; read data directly into inline buffer; remove old malloc error path
 - [ ] 6e. Add `bptr_node_evict(self, node)` → calls `bptr_cache_evict`; declare in `bptr_node.h`

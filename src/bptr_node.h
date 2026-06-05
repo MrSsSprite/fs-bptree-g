@@ -59,14 +59,12 @@ int bptr_node_load
  *
  * @param   self  bptr obj.
  * @param   node  the node to be unloaded
- * @retval  0  success
- * @retval  2  bptr_node_flush failure. bptr_node_flush sets bptr_errno
  *
  * @note    The node may still be cached depending on the implementation.
  * @note    The library is responsible for flushing, when necessary. Thus,
  *          user is not (though allowed) responsible to flush the node.
  */
-int bptr_node_unload(struct bptr *self, struct bptr_node *node);
+void bptr_node_unload(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   flush a bptr node to file.
  * @param   self  bptr obj.
