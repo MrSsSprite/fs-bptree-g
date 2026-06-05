@@ -210,10 +210,14 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
    /*-------------------------- Error Handling Area --------------------------*/
    _Bool has_set_err = 0;
 
-NODE_FLUSH_ERR: _set_errno(BPTR_E_FACCESS);
-   evict_push(cache, pool_idx);
 NODE_LOAD_ERR:  _set_errno(fn_err);
+   pool_free_push(cache, pool_idx); // return to free pool even from eviction
+   if (0)   // enter only on jump
+    {
+NODE_FLUSH_ERR: _set_errno(BPTR_E_FACCESS);
+      evict_push(cache, pool_idx);
 EVICT_ERR:      _set_errno(BPTR_E_CACHE_FULL);
+    }
    return NULL;
 }
 
