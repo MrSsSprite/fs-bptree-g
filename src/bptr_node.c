@@ -222,57 +222,61 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
 // node->{prev, next} are left uninitialized; the
 // caller is responsible to write that
 // if parent == 0, self->height is incremented
+// checksum is also uninitialized
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent)
 {
-   uint16_t flags;
-   struct bptr_node *node;
+   bptr_node_t file_slot;
+   struct bptr_node *node, *parent_n;
 
-   // zero-initialize to avoid valgrind warning on uninitialized padding bits
-   node = calloc(1, sizeof(struct bptr_node));
-   if (node == NULL)
-    { bptr_errno = 1; goto NODE_MALLOC_ERR; }
+   file_slot = bptr_node_prealloc(self);
+   if (file_slot == 0) goto PREALLOC_ERR;
+
+   node = bptr_cache_alloc(self, file_slot);
+   if (node == NULL) goto CACHE_ALLOC_ERR;
 
    if (parent)
     {
-      struct bptr_node *parent_node = bptr_node_load(self, parent);
-      if (parent_node == NULL)
-       { bptr_errno = 2; goto LOAD_PARENT_ERR; }
-      node->level = parent_node->level - 1;
-      if (bptr_node_unload(self, parent_node))
-       { bptr_errno = 200; goto LOAD_PARENT_ERR; }
+      parent_n = bptr_node_fetch(self, parent);
+      if (parent_n == NULL) goto PARENT_LOAD_ERR;
+      node->level = parent_n->level - 1;
+      bptr_node_unload(self, parent_n);
     }
    else
       // if parent == 0, root split
       node->level = self->height++;
-   flags = BPTR_NODE_FLAG_VALID;
+
+   node->flags = BPTR_NODE_FLAG_VALID;
    if (node->level == 0)
     {
-      flags |= BPTR_NODE_FLAG_LEAF;
+      node->flags |= BPTR_NODE_FLAG_LEAF;
       node->is_leaf = 1;
+      node->vals = node->keys + (self->node_bound.leaf.up - 1) * self->key_size;
     }
    else
+    {
       node->is_leaf = 0;
-   node->flags = flags;
+      node->vals = node->keys + (self->node_bound.brch.up - 1) * self->key_size;
+    }
    node->is_dirty = 1;
    node->key_count = 0;
    node->parent = parent;
-   node->node_idx = bptr_node_prealloc(self);
-   if (node->node_idx == 0) goto PREALLOC_ERR;
-   _node_kv_malloc(self, node);
-   if (node->keys == NULL || node->vals == NULL)
-    { bptr_errno = 1; goto KV_MALLOC_ERR; }
-   /* TODO: checksum */
+   node->node_idx = file_slot;
 
    return node;
 
-KV_MALLOC_ERR:
-   free(node->vals);
-   free(node->keys);
-PREALLOC_ERR:
-   free(node);
-LOAD_PARENT_ERR:
-NODE_MALLOC_ERR:
+   /*-------------------------- Error Handling Zone --------------------------*/
+   _Bool has_set_err;
+   int err_code;
+
+PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
+   bptr_cache_release(self, node);
+CACHE_ALLOC_ERR:  _set_err_code(bptr_errno);
+   if (bptr_node_vacate(self, parent_n) == 2)
+      perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
+PREALLOC_ERR:  _set_err_code(bptr_errno);
+
+   bptr_errno = err_code;
    return NULL;
 }
 
