@@ -4,7 +4,6 @@
 #include "bptr_io.h"
 #include "bptr_cache.h"
 #include "bptr_utils.h"
-#include <stdlib.h>
 #include <string.h>
 /*--------------------------- Private Includes END ---------------------------*/
 
