@@ -131,8 +131,8 @@ bptr_node_t bptr_node_prealloc (struct bptr *self);
  * @param[in]     node  node to which the file space is allocated
  * @return  status_code
  * @retval  0           success
- * @retval  2           failed during io flush. @c bptr_io_flush_node sets
- *                      @c bptr_errno
+ * @retval  non-0       failed during io flush. Returns what
+ *                      @c bptr_io_flush_node returns.
  *
  * @warning @c node->node_idx is @b not modified by this function. In other
  *          words, it still ref. to released space. The caller is responsible
@@ -316,10 +316,23 @@ INVALID_NODE:     _set_err_code(BPTR_E_FN_INPUT);
 }
 
 
-bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node)
+int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 {
+   int fn_err;
+
    bptr_node_marshal(self, node);
-   return bptr_io_flush_node(self, node->node_idx);
+   fn_err = bptr_io_flush_node(self, node->node_idx);
+   if (fn_err) goto FLUSH_ERR;
+   node->is_dirty = 0;
+
+   return 0;
+
+   /*-------------------------- Error Handling Area --------------------------*/
+   int err_code;
+   _Bool has_set_err = 0;
+
+FLUSH_ERR:  _set_err_code(fn_err);
+   return err_code;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
@@ -437,6 +450,7 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
 {
    uint16_t flags = 0;
    void *buf_it = self->fbuf;
+   int fn_err;
 
    iter_write(buf_it, &flags, 2);
 
@@ -446,8 +460,8 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
       _WRITE_FL_HEAD(BPTR_NORM_PTR_TYPE);
 #undef _WRITE_FL_HEAD
 
-   if (bptr_io_flush_node(self, node->node_idx) == 0)
-      return 2;   // bptr_io_flush_node sets bptr_errno
+   fn_err = bptr_io_flush_node(self, node->node_idx);
+   if (fn_err) return fn_err;
 
    self->free_list.head = node->node_idx;
    self->free_list.cnt++;

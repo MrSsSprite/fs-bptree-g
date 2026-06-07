@@ -238,65 +238,38 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 }
 
 
-// node_idx == 0 means new node
-// returns node index (not file offset) on success; 0 on failure
-bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
+int bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 {
    bptr_off_t pos;
 
    
-   if (node_idx == 0)   // new node
-    {
-      if (self->free_list.cnt)
-       {
-         if (bptr_io_fread_node(self, self->free_list.head))
-          { bptr_errno = 1; return 0; }
-         if (*(uint16_t*)self->fbuf & BPTR_NODE_FLAG_VALID)
-          { bptr_errno = -1; return 0; }
-         pos = self->free_list.head * self->node_size;
-#define _FETCH_NEXT_FREE_NODE(T) do \
- { self->free_list.head = *(T*)((uint16_t*)self->fbuf + 1); } \
-while (0)
-         if (self->is_lite)   _FETCH_NEXT_FREE_NODE(BPTR_LITE_PTR_TYPE);
-         else                 _FETCH_NEXT_FREE_NODE(BPTR_NORM_PTR_TYPE);
-#undef _FETCH_NEXT_FREE_NODE
-         self->free_list.cnt--;
-         if (fseek64(self->file, pos, SEEK_SET))
-          { bptr_errno = 1; return 0; }
-       }
-      else
-       {
-         if (fseek64(self->file, 0, SEEK_END))
-          { bptr_errno = 1; return 0; }
-       }
-    }
-   else                 // update node
+   if (node_idx == 0)
+      goto INVALID_INPUT_ERR;
+   else  // update node
     {
       if (fseek64(self->file, node_idx * self->node_size, SEEK_SET))
-       { bptr_errno = 1; return 0; }
+         goto FACCESS_ERR;
     }
 
    // calculate the location of node in block size
    pos = ftell64(self->file);
-   if (pos == -1L)
-    {
-      bptr_errno = 2;
-      return 0;
-    }
+   if (pos == -1L) goto FACCESS_ERR;
    pos /= self->node_size;
 
    if (fwrite(self->fbuf, self->node_size, 1, self->file) != 1)
-    {
-      bptr_errno = 3;
-      return 0;
-    }
+      goto FACCESS_ERR;
    if (fflush(self->file))
-    {
-      bptr_errno = 4;
-      return 0;
-    }
+      goto FACCESS_ERR;
 
-   return pos;
+   return 0;
+
+   /*-------------------------- Error Handling Zone --------------------------*/
+   int err_code;
+   _Bool has_set_err = 0;
+
+FACCESS_ERR:         _set_err_code(BPTR_E_FACCESS);
+INVALID_INPUT_ERR:   _set_err_code(BPTR_E_FN_INPUT);
+   return err_code;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 

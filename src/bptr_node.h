@@ -71,9 +71,11 @@ void bptr_node_unload(struct bptr *self, struct bptr_node *node);
  * @param   node  the node to be flushed
  * @return  same as if bptr_io_flush_node is called (bptr_io_flush_node sets
  *          @c bptr_errno on failure).
+ * @return  0           Success
+ * @return  BPTR_E_...  Corresponding type of failure
  * @see     bptr_io_flush_node
  */
-bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node);
+int bptr_node_flush(struct bptr *self, struct bptr_node *node);
 /*--------------------------- Public Functions END ---------------------------*/
 
 
