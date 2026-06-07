@@ -266,7 +266,7 @@ struct bptr_node *bptr_node_new
    return node;
 
    /*-------------------------- Error Handling Zone --------------------------*/
-   _Bool has_set_err;
+   _Bool has_set_err = 0;
    int err_code;
 
 PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
