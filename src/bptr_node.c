@@ -281,13 +281,6 @@ PREALLOC_ERR:  _set_err_code(bptr_errno);
 }
 
 
-void bptr_node_free(struct bptr_node *node)
-{
-   free(node->keys); free(node->vals);
-   free(node);
-}
-
-
 void bptr_node_unload(struct bptr *self, struct bptr_node *node)
 { bptr_cache_release(self, node); }
 

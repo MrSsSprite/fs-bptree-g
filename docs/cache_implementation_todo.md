@@ -49,7 +49,7 @@
 - [x] 6d. Update `bptr_node_unmarshal`: remove `_node_kv_malloc` call; repoint `vals = keys + key_size * (is_leaf ? leaf.up : brch.up)` after reading level; read data directly into inline buffer; remove old malloc error path
 - [ ] 6e. Add `bptr_node_evict(self, node)` → calls `bptr_cache_evict`; declare in `bptr_node.h`
 - [x] 6f. Fix `bptr_node_flush`: set `node->is_dirty = 0` on successful flush
-- [ ] 6g. Remove `bptr_node_free` (nodes live in pool, not individually alloc'd; only caller was old `bptr_node_unload`)
+- [x] 6g. Remove `bptr_node_free` (nodes live in pool, not individually alloc'd; only caller was old `bptr_node_unload`)
 - [ ] 6h. Remove `_node_kv_malloc` macro (no longer used)
 
 ### Step 7: Wire up core (init, load, unload)
