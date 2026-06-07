@@ -3,6 +3,7 @@
 #include "../bptree.h"
 #include "bptr_internal.h"
 #include "bptr_node.h"
+#include "bptr_utils.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -29,12 +30,6 @@
    self->free_list.cnt = *(uptr_type*)memit; memit += (uptr_size); \
    self->node_cnt = *(uptr_type*)memit; memit += (uptr_size); \
 } while (0)
-
-#define _set_err_code(has_set_e, e_code_var, e_code) do \
-{ \
-   if (!(has_set_e)) { (e_code_var) = (e_code); (has_set_e) = 1; } \
-} while (0)
-#define set_err_code(e_code) _set_err_code(has_set_err, err_code, e_code)
 /*---------------------------- Private Macros END ----------------------------*/
 
 
@@ -102,18 +97,18 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
     {
    case 0:  break;
    default:
-      set_err_code(BPTR_E_UNREACHABLE);
+      _set_err_code(BPTR_E_UNREACHABLE);
    case BPTR_E_FACCESS:
       goto FWRITE_ERR;
     }
 
    return 0;
 
-FWRITE_ERR:      set_err_code(BPTR_E_FACCESS);
+FWRITE_ERR:      _set_err_code(BPTR_E_FACCESS);
    free(self->fbuf);
-FBUF_MALLOC_ERR: set_err_code(BPTR_E_OOM);
+FBUF_MALLOC_ERR: _set_err_code(BPTR_E_OOM);
    fclose(self->file);
-FOPEN_ERR:       set_err_code(BPTR_E_FACCESS);
+FOPEN_ERR:       _set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
@@ -210,7 +205,7 @@ int bptr_io_fclose(struct bptr *self)
     {
    case 0: break;
    default:
-      set_err_code(BPTR_E_UNREACHABLE);
+      _set_err_code(BPTR_E_UNREACHABLE);
    case BPTR_E_FACCESS:
       goto FWRITE_ERR;
     }
@@ -222,7 +217,7 @@ int bptr_io_fclose(struct bptr *self)
 
    return err_code;
 
-FWRITE_ERR: set_err_code(BPTR_E_FACCESS);
+FWRITE_ERR: _set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
