@@ -53,7 +53,7 @@
 - [x] 6h. Remove `_node_kv_malloc` macro (no longer used)
 
 ### Step 7: Wire up core (init, load, unload)
-- [ ] 7a. Add `uint32_t cache_capacity` param to `bptr_init` (declaration + definition); validate >= BPTR_CACHE_CAPACITY_MIN; store; call `bptr_cache_init` after `bptr_io_fcreat`; cleanup cache on error
+- [x] 7a. Add `uint32_t cache_capacity` param to `bptr_init` (declaration + definition); validate >= BPTR_CACHE_CAPACITY_MIN; store; call `bptr_cache_init` after `bptr_io_fcreat`; cleanup cache on error
 - [ ] 7b. Add `uint32_t cache_capacity` param to `bptr_load` (declaration + definition); validate; store; call `bptr_cache_init` after `bptr_io_fload` + `_bptr_bound_set`; cleanup cache on error
 - [ ] 7c. Update `bptr_unload`: call `bptr_cache_destroy(self)` BEFORE `bptr_io_fclose(self)`
 - [ ] 7d. Remove stale TODOs: `bptr_node_unload` "involve cache", `bptr_io_fclose` "flush cached nodes", `bptr_core.c` "cache pool should be involved later"

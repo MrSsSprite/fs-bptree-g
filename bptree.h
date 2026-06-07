@@ -41,6 +41,7 @@ struct bptr *bptr_init
    uint32_t node_size,
    uint16_t key_size,
    uint16_t value_size,
+   uint64_t cache_capacity,
    int (*compare)(const void *lhs, const void *rhs)
 );
 struct bptr *bptr_load(const char *filename,

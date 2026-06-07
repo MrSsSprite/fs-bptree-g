@@ -3,6 +3,7 @@
 #include "bptr_internal.h"
 #include "bptr_io.h"
 #include "bptr_node.h"
+#include "bptr_cache.h"
 #include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
@@ -59,20 +60,23 @@ struct bptr *bptr_init
    uint32_t node_size,
    uint16_t key_size,
    uint16_t value_size,
+   uint64_t cache_capacity,
    int (*compare)(const void *lhs, const void *rhs)
 )
 {
    struct bptr *self;
+   int fn_err;
 
    /* Node must be large enough to at least contain
     * the metadata, 1 key and 2 childs */
    if (node_size < BPTR_NODE_METADATA_BYTE + key_size +
-                   (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2)
-      return NULL;
+                   (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2 ||
+       cache_capacity < BPTR_CACHE_CAPACITY_MIN)
+      goto INVALID_SIZE_ERR;
 
    /* malloc for the handler */
    self = malloc(sizeof (struct bptr));
-   if (self == NULL) return NULL;
+   if (self == NULL) goto BPTR_MALLOC_ERR;
 
    /* Write Metadata */
    self->version = BPTR_CURRENT_VERSION;
@@ -81,7 +85,7 @@ struct bptr *bptr_init
    self->node_size = node_size;
    self->key_size = key_size;
    self->value_size = value_size;
-   _bptr_bound_set(self);
+   _bptr_bound_set(self);  // goto INVALID_FANOUT_ERR on error
    self->record_cnt = 0;
    self->node_cnt = 0;
    self->height = 0;
@@ -97,6 +101,9 @@ struct bptr *bptr_init
          (leaf_storage > brch_storage ? leaf_storage : brch_storage);
    }
 
+   fn_err = bptr_cache_init(self, cache_capacity);
+   if (fn_err) goto CACHE_INIT_ERR;
+
    /* Construct the file */
    if (bptr_io_fcreat(self, filename)) 
       goto FOPEN_ERR;
@@ -104,9 +111,18 @@ struct bptr *bptr_init
    return self;
 
 /* Error Handle */
-FOPEN_ERR:
-INVALID_FANOUT_ERR:
+   _Bool has_set_err = 0;
+
+   // TODO: fclose Error handle
+   bptr_io_fclose(self);
+FOPEN_ERR:           _set_errno(BPTR_E_FACCESS);
+   //TODO: deinit Error handle
+   bptr_cache_deinit(self);
+CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    free(self);
+BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
+INVALID_SIZE_ERR:    _set_errno(BPTR_E_FN_INPUT);
    return NULL;
 }
 
