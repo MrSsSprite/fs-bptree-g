@@ -48,24 +48,6 @@
    (iter) += sizeof(type); \
 } while (0)
 
-#define _node_kv_malloc(self, node) do \
-{ \
-   if ((node)->is_leaf) \
-    { \
-      (node)->keys = \
-         malloc(((self)->node_bound.leaf.up - 1) * (self)->key_size); \
-      (node)->vals = \
-         malloc(((self)->node_bound.leaf.up - 1) * (self)->value_size); \
-    } \
-   else \
-    { \
-      (node)->keys = \
-         malloc(((self)->node_bound.brch.up - 1) * (self)->key_size); \
-      (node)->vals = \
-         malloc((self)->node_bound.brch.up * BPTR_PTR_SIZE); \
-    } \
-} while (0)
-
 #define _node_val_size(self, node) \
    ((node)->is_leaf ? (self)->value_size : \
                       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
