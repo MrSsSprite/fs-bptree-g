@@ -59,12 +59,12 @@
 - [x] 7d. Remove stale TODOs: `bptr_node_unload` "involve cache", `bptr_io_fclose` "flush cached nodes", `bptr_core.c` "cache pool should be involved later"
 
 ### Step 8: Update public API declarations
-- [ ] 8a. Update `bptr_init` declaration in `bptree.h` with `uint32_t cache_capacity` param
-- [ ] 8a. Update `bptr_load` declaration in `bptree.h` with `uint32_t cache_capacity` param
+- [x] 8a. Update `bptr_init` declaration in `bptree.h` with `uint32_t cache_capacity` param
+- [x] 8a. Update `bptr_load` declaration in `bptree.h` with `uint32_t cache_capacity` param
 - [ ] 8b. Add `bptr_node_evict` / `bptr_node_flush` declarations to `bptree.h` if callers need explicit cache control
 
 ### Step 9: Cleanup and final verification
-- [ ] 9a. Grep for `TODO.*cache` and remove/update all stale comments
+- [x] 9a. Grep for `TODO.*cache` and remove/update all stale comments
 - [ ] 9b. Remove `node_bound.buf_sz` from struct + computation if fully replaced by `node_buf_sz`
 - [ ] 9c. Manually verify all 8 edge cases from the plan's table
 - [ ] 9d. Remove dead code: `bptr_node_free` (done in 6g), `_node_kv_malloc` (done in 6h), any orphaned helpers
