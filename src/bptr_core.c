@@ -174,12 +174,23 @@ BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
 
 int bptr_unload(struct bptr *self)
 {
-   int err_code = 0;
+   int fn_err;
 
-   if (bptr_io_fclose(self))
-      err_code = BPTR_E_FCLOSE;
+   fn_err = bptr_cache_deinit(self);
+   if (fn_err) goto CACHE_DEINIT_ERR;
+
+   fn_err = bptr_io_fclose(self);
+   if (fn_err) goto IO_FCLOSE_ERR;
    free(self);
 
+   return 0;
+
+   /*-------------------------- Error Handling Zone --------------------------*/
+   _Bool has_set_err = 0;
+   int err_code;
+
+CACHE_DEINIT_ERR: _set_err_code(fn_err);
+IO_FCLOSE_ERR:    _set_err_code(fn_err);
    return err_code;
 }
 

@@ -57,9 +57,15 @@ int bptr_find_range(struct bptr *self, const void *bg, const void *ed,
  * Unload the bptr object and flush the content.
  *
  * @param[in,out] self  bptr obj. to be unloaded
- * @return  execution status
+ * @return  execution result
  * @retval  0(BPTR_E_SUCCESS) Success
  * @retval  BPTR_E_FCLOSE     Failed at fclose
+ * @retval  other             Failed on cache deinit.
+ *
+ * @note    If any error except @c BPTR_E_FCLOSE is captured, @c self->file
+ *          remains validly opened.
+ * @remark  If @c BPTR_E_FCLOSE is captured, any further access to @c self->file
+ *          leads to undefined behavior.
  */
 int bptr_unload(struct bptr *self);
 /*--------------------------- Public Functions END ---------------------------*/

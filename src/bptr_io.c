@@ -200,7 +200,6 @@ int bptr_io_fclose(struct bptr *self)
    _Bool has_set_err = 0;
    int err_code = 0;
 
-   // TODO: flush cached nodes
    switch (_header_fwrite(self))
     {
    case 0: break;
