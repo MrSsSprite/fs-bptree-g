@@ -18,8 +18,8 @@
 /*---------------------- Private Function Declarations -----------------------*/
 static inline
 uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift);
-static
-uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx);
+static struct cache_ht_entry *ht_lookup
+ (struct bptr_cache *cache, bptr_node_t node_idx);
 static void ht_insert
  (struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx);
 static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx);
@@ -176,15 +176,18 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
 
    if (node_idx == 0) { bptr_errno = BPTR_E_FN_INPUT; return NULL; }
 
-   pool_idx = ht_lookup(cache, node_idx);
-   if (pool_idx < cache->pool_cap)  // cache HIT
-    {
-      pool_en = cache->pool + pool_idx;
-      if (pool_en->refcnt == 1)
-         evict_remove(cache, pool_idx);
-      pool_en->refcnt++;
-      return &pool_en->node;
-    }
+   {  // Cache HIT
+      struct cache_ht_entry *ht_en = ht_lookup(cache, node_idx);
+      if (ht_en)  // cache HIT
+       {
+         pool_idx = ht_en->pool_idx;
+         pool_en = cache->pool + pool_idx;
+         if (pool_en->refcnt == 1)
+            evict_remove(cache, pool_idx);
+         pool_en->refcnt++;
+         return &pool_en->node;
+       }
+   }
 
    // Cache MISS
    pool_idx = pool_free_pop(cache);
@@ -300,8 +303,8 @@ uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift)
 }
 
 
-static
-uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx)
+static struct cache_ht_entry *ht_lookup
+ (struct bptr_cache *cache, bptr_node_t node_idx)
 {
    struct cache_ht_entry *ht_en;
    uint64_t psl;
@@ -312,15 +315,15 @@ uint64_t ht_lookup(struct bptr_cache *cache, bptr_node_t node_idx)
    while (ht_en->node_idx)
     {
       if (ht_en->PSL < psl)
-         return cache->pool_cap;
+         return NULL;
       if (ht_en->node_idx == node_idx)
-         return ht_en->pool_idx;
+         return ht_en;
 
       idx = (idx + 1) & ~(cache->ht_cap);
       psl++;
     }
 
-   return cache->pool_cap;
+   return NULL;
 }
 
 
@@ -354,11 +357,12 @@ void ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx
 
 static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx)
 {
-   uint64_t idx = ht_lookup(cache, node_idx);
-   struct cache_ht_entry *ht_en;
+   struct cache_ht_entry *ht_en = ht_lookup(cache, node_idx);
+   uint64_t idx;
 
-   if (idx == cache->pool_cap) return; // not found
+   if (ht_en == NULL) return; // not found
 
+   idx = ht_en - cache->ht;
    while (1)
     {
       uint64_t next = (idx + 1) & ~(cache->ht_cap);
