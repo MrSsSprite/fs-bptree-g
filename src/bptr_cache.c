@@ -94,7 +94,7 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
       if (cache->ht_cap & (uint64_t)1 << 63) goto SIZE_TOO_LARGE_ERR;
       cache->ht_cap <<= 1;
     }
-   cache->hash_shift = ds_clz(cache->ht_cap);
+   cache->hash_shift = ds_clz(cache->ht_cap) + 1;
 
    {
       size_t leaf_storage =
