@@ -68,6 +68,7 @@ struct bptr_cache
 int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
 {
    struct bptr_cache *cache;
+   size_t node_buf_sz;
 
    // Necessary. the result of clz is undefined if input is 0.
    // Or, if msb is set, no valid value represented in uint64_t can contain it
@@ -95,9 +96,17 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
     }
    cache->hash_shift = ds_clz(cache->ht_cap);
 
+   {
+      size_t leaf_storage =
+         (self->node_bound.leaf.up - 1) * self->key_size +
+         (self->node_bound.leaf.up - 1) * self->value_size;
+      size_t brch_storage =
+         (self->node_bound.brch.up - 1) * self->key_size +
+         self->node_bound.brch.up * BPTR_PTR_SIZE;
+      node_buf_sz = (leaf_storage > brch_storage ? leaf_storage : brch_storage);
+   }
    cache->pool =
-      malloc((sizeof(struct cache_pool_entry) + self->node_bound.buf_sz) *
-             cache->pool_cap);
+      malloc((sizeof(struct cache_pool_entry) + node_buf_sz) * cache->pool_cap);
    if (cache->pool == NULL) goto POOL_MALLOC_ERR;
    cache->ht = malloc(sizeof(struct cache_ht_entry) * cache->ht_cap);
    if (cache->ht == NULL) goto HT_MALLOC_ERR;

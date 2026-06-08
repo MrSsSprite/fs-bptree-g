@@ -68,7 +68,6 @@ struct bptr
       struct _bptr_node_boundry
        { uint_fast32_t low, up; }
       leaf, brch;
-      size_t buf_sz;
     }
    node_bound;
 

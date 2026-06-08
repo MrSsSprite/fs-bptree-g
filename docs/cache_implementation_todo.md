@@ -65,7 +65,7 @@
 
 ### Step 9: Cleanup and final verification
 - [x] 9a. Grep for `TODO.*cache` and remove/update all stale comments
-- [ ] 9b. Remove `node_bound.buf_sz` from struct + computation if fully replaced by `node_buf_sz`
+- [x] 9b. Remove `node_bound.buf_sz` from struct + computation if fully replaced by `node_buf_sz`
 - [ ] 9c. Manually verify all 8 edge cases from the plan's table
 - [ ] 9d. Remove dead code: `bptr_node_free` (done in 6g), `_node_kv_malloc` (done in 6h), any orphaned helpers
 
