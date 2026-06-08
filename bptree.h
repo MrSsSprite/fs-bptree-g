@@ -44,7 +44,7 @@ struct bptr *bptr_init
    uint64_t cache_capacity,
    int (*compare)(const void *lhs, const void *rhs)
 );
-struct bptr *bptr_load(const char *filename,
+struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs));
 int bptr_insert(struct bptr *self, const void *key, const void *value);
 int bptr_erase(struct bptr *self, const void *key);

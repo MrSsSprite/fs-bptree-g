@@ -65,7 +65,6 @@ struct bptr *bptr_init
 )
 {
    struct bptr *self;
-   int fn_err;
 
    /* Node must be large enough to at least contain
     * the metadata, 1 key and 2 childs */
@@ -101,8 +100,7 @@ struct bptr *bptr_init
          (leaf_storage > brch_storage ? leaf_storage : brch_storage);
    }
 
-   fn_err = bptr_cache_init(self, cache_capacity);
-   if (fn_err) goto CACHE_INIT_ERR;
+   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
 
    /* Construct the file */
    if (bptr_io_fcreat(self, filename)) 
@@ -127,7 +125,7 @@ INVALID_SIZE_ERR:    _set_errno(BPTR_E_FN_INPUT);
 }
 
 
-struct bptr *bptr_load(const char *filename,
+struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs))
 {
    struct bptr *self;
@@ -156,12 +154,21 @@ struct bptr *bptr_load(const char *filename,
          (leaf_storage > brch_storage ? leaf_storage : brch_storage);
    }
 
+   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
+
    return self;
 
-INVALID_FANOUT_ERR:
+   /*-------------------------- Error Handling Zone --------------------------*/
+   _Bool has_set_err = 0;
+
+   //TODO: deinit Error handle
+   bptr_cache_deinit(self);
+CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    bptr_io_fclose(self);
-FLOAD_ERR:
+FLOAD_ERR:           _set_errno(BPTR_E_FACCESS);
    free(self);
+BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
    return NULL;
 }
 
