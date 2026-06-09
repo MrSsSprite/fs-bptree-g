@@ -290,6 +290,16 @@ void bptr_cache_release(struct bptr *self, struct bptr_node *node)
    if (--pool_en->refcnt == 1)
       evict_push(cache, pool_en - cache->pool);
 }
+
+
+void bptr_cache_reclaim(struct bptr *self, struct bptr_node *node)
+{
+   struct bptr_cache *cache = self->cache;
+   struct cache_pool_entry *pool_en = CACHE_ENTRY_OF(node);
+
+   pool_en->refcnt = 0;
+   pool_free_push(cache, pool_en - cache->pool);
+}
 /*--------------------------- Public Functions END ---------------------------*/
 
 
