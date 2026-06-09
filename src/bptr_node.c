@@ -251,7 +251,7 @@ struct bptr_node *bptr_node_new
    int err_code;
 
 PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
-   bptr_cache_release(self, node);
+   bptr_cache_reclaim(self, node);
 CACHE_ALLOC_ERR:  _set_err_code(bptr_errno);
    if (bptr_node_vacate(self, parent_n) == 2)
       perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
