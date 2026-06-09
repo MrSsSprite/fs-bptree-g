@@ -387,6 +387,8 @@ static void evict_push(struct bptr_cache *cache, uint64_t pool_idx)
       return;
     }
    pool_en->evict_prev = cache->evict_tail;  // link backward to old tail
+   // link old tail to new tail
+   cache->pool[cache->evict_tail].evict_next = pool_idx;
    cache->evict_tail = pool_idx;             // update global tail
 }
 
