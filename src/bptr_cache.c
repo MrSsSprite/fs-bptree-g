@@ -380,14 +380,14 @@ static void evict_push(struct bptr_cache *cache, uint64_t pool_idx)
 {
    struct cache_pool_entry *pool_en = cache->pool + pool_idx;
 
-   pool_en->evict_next = pool_idx;  // self == sentinel value
-   if (cache->pool[cache->evict_head].refcnt != 1) // if empty
+   pool_en->evict_next = pool_idx;  // new entry is new tail (self-sentinel)
+   if (cache->pool[cache->evict_head].refcnt != 1) // queue empty?
     {
       pool_en->evict_prev = cache->evict_head = cache->evict_tail = pool_idx;
       return;
     }
-   pool_en->evict_prev = cache->evict_tail;
-   cache->evict_tail = pool_idx;
+   pool_en->evict_prev = cache->evict_tail;  // link backward to old tail
+   cache->evict_tail = pool_idx;             // update global tail
 }
 
 
