@@ -153,7 +153,7 @@ int bptr_cache_deinit(struct bptr *self)
     {
       if (cache->pool[i].refcnt == 0 || !cache->pool[i].node.is_dirty)
          continue;
-      if (bptr_node_flush(self, &cache->pool[i].node) == 0)
+      if (bptr_node_flush(self, &cache->pool[i].node))
          return BPTR_E_FACCESS;
     }
 
@@ -202,7 +202,7 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
       victim_en = cache->pool + pool_idx;
       if (victim_en->node.is_dirty)
        {
-         if (bptr_node_flush(self, &victim_en->node) == 0)
+         if (bptr_node_flush(self, &victim_en->node))
           { goto NODE_FLUSH_ERR; }
        }
 
@@ -255,7 +255,7 @@ struct bptr_node *bptr_cache_alloc(struct bptr *self, bptr_node_t node_idx)
       victim_en = cache->pool + pool_idx;
       if (victim_en->node.is_dirty)
        {
-         if (bptr_node_flush(self, &victim_en->node) == 0)
+         if (bptr_node_flush(self, &victim_en->node))
           { goto NODE_FLUSH_ERR; }
        }
 
