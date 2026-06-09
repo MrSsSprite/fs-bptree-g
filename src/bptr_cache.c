@@ -44,7 +44,7 @@ struct cache_pool_entry
    uint16_t refcnt;  // 0:EMPTY, 1:INACTIVE, >=2:ACTIVE
    // pool[] index; sentinel: index of self if head/tail
    // evict_next points to next free block if EMPTY;
-   // or, 0 if every subsequent entry is free
+   // or, self if every subsequent entry is free, pool_cap if being the last
    uint64_t evict_prev, evict_next;
    struct bptr_node node;
 };
@@ -445,11 +445,10 @@ static uint64_t pool_free_pop(struct bptr_cache *cache)
       return cache->pool_cap;
     }
 
-   if (pool_en->evict_next == 0) // Trailing free block
+   if (pool_en->evict_next == pool_idx) // Trailing free block
     {
-      // Logically, if following cond is true, pool_en is the last free block
       if (pool_idx + 1 < cache->pool_cap)
-         pool_en[1].evict_next = 0;
+         pool_en[1].evict_next = pool_idx + 1;
       cache->pool_free++;
     }
    else
