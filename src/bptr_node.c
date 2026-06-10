@@ -107,21 +107,16 @@ bptr_node_t bptr_node_prealloc (struct bptr *self);
  * This function releases the file space allocated for the node (identified by
  * @c node->node_idx ) and returns it back to internal free list.
  *
- * @param[in,out] self  bptr obj. Only @c fbuf and @c free_list fields will be
- *                      modified.
- * @param[in]     node  node to which the file space is allocated
+ * @param[in,out] self     bptr obj. Only @c fbuf and @c free_list fields will
+ *                         be modified.
+ * @param[in]     node_idx node to which the file space is allocated
  * @return  status_code
  * @retval  0           success
  * @retval  non-0       failed during io flush. Returns what
  *                      @c bptr_io_flush_node returns.
- *
- * @warning @c node->node_idx is @b not modified by this function. In other
- *          words, it still ref. to released space. The caller is responsible
- *          for nulling the index or discarding the node to prevent accidental
- *          use of vacated space.
  */
 static inline
-int bptr_node_vacate(struct bptr *self, struct bptr_node *node);
+int bptr_node_vacate(struct bptr *self, bptr_node_t node_idx);
 /**
  * @brief   Insert a key into keys
  *
@@ -253,7 +248,7 @@ struct bptr_node *bptr_node_new
 PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
    bptr_cache_reclaim(self, node);
 CACHE_ALLOC_ERR:  _set_err_code(bptr_errno);
-   if (bptr_node_vacate(self, parent_n) == 2)
+   if (bptr_node_vacate(self, file_slot))
       perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
 PREALLOC_ERR:  _set_err_code(bptr_errno);
 
@@ -415,7 +410,7 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
 
 
 static inline
-int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
+int bptr_node_vacate(struct bptr *self, bptr_node_t node_idx)
 #define _WRITE_FL_HEAD(T) do \
 { \
       T head = self->free_list.head; \
@@ -434,10 +429,10 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
       _WRITE_FL_HEAD(BPTR_NORM_PTR_TYPE);
 #undef _WRITE_FL_HEAD
 
-   fn_err = bptr_io_flush_node(self, node->node_idx);
+   fn_err = bptr_io_flush_node(self, node_idx);
    if (fn_err) return fn_err;
 
-   self->free_list.head = node->node_idx;
+   self->free_list.head = node_idx;
    self->free_list.cnt++;
    return 0;
 }
