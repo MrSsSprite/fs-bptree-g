@@ -218,10 +218,10 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
    if (self->root_idx == 0)
     { bptr_errno = 0; return (struct node_idx_pair){ 0, NULL }; }
 
-   for (node = bptr_node_load(self, self->root_idx); ;)
+   for (node = bptr_node_fetch(self, self->root_idx); ;)
     {
       bptr_node_t node_idx;
-      // Error: bptr_node_load() sets bptr_errno on error
+      // Error: bptr_node_fetch() sets bptr_errno on error
       if (node == NULL) return (struct node_idx_pair){ 0, NULL };
 
       for (lo = 0, up = node->key_count, md = up / 2;
@@ -242,18 +242,8 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
 
       // setup for next iteration
       node_idx = _node_brch_vals_get(self, node, cmp_res == 0 ? md + 1 : up);
-      if ((err_code = bptr_node_unload(self, node)))
-       {
-         switch (err_code)
-          {
-         case 2: // Error: bptr_node_flush sets bptr_errno
-            bptr_errno &= 0x80u; // set 0x80 bit to differentiate load error
-            return (struct node_idx_pair){ 0, NULL };
-         default:
-            exit(BPTR_E_UNREACHABLE);
-          }
-       }
-      node = bptr_node_load(self, node_idx);
+      bptr_node_unload(self, node);
+      node = bptr_node_fetch(self, node_idx);
     }
 
    // either returns due to empty tree or on leaf (in for loop)
