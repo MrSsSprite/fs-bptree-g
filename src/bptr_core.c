@@ -125,12 +125,7 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
    self = malloc(sizeof (struct bptr));
    if (self == NULL) return NULL;
 
-   fn_ret = bptr_io_fload(self, filename);
-   if (fn_ret)
-    {
-      bptr_errno = 1;
-      goto FLOAD_ERR;
-    }
+   if (bptr_io_fload(self, filename)) goto FLOAD_ERR;
    _bptr_bound_set(self);
    self->compare = compare;
 
