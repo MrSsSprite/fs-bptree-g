@@ -45,7 +45,8 @@ int bptr_io_fload(struct bptr *self, const char *filename);
  * @retval  BPTR_E_FACCESS    Failed when flushing caches
  * @retval  BPTR_E_FCLOSE     Failed at fclose
  *
- * @note @c self->fbuf is free'd if @c BPTR_E_FCLOSE is captured
+ * @remark  @c self->fbuf is free'd if @c BPTR_E_FCLOSE is returned; otherwise,
+ *          both @c self->file and @c self->fbuf remains valid on error.
  */
 int bptr_io_fclose(struct bptr *self);
 int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx);
