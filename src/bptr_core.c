@@ -171,6 +171,7 @@ int bptr_unload(struct bptr *self)
 
 CACHE_DEINIT_ERR: _set_err_code(fn_err);
 IO_FCLOSE_ERR:    _set_err_code(fn_err);
+   if (bptr_errno == BPTR_E_FCLOSE) free(self);
    return err_code;
 }
 
