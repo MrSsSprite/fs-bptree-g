@@ -36,7 +36,7 @@ struct cache_ht_entry
 {
    bptr_node_t node_idx;   // 0 = Empty
    uint64_t    pool_idx;   // index into pool
-   uint64_t PSL;           // Probe Sequence Length for Robin Hood Probing
+   uint64_t psl;           // Probe Sequence Length for Robin Hood Probing
 };
 
 struct cache_pool_entry
@@ -324,7 +324,7 @@ static struct cache_ht_entry *ht_lookup
    ht_en = cache->ht + idx;
    while (ht_en->node_idx)
     {
-      if (ht_en->PSL < psl)
+      if (ht_en->psl < psl)
          return NULL;
       if (ht_en->node_idx == node_idx)
          return ht_en;
@@ -352,7 +352,7 @@ void ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx
       if (ht_en->node_idx == 0)
        { *ht_en = cur; return; }
 
-      if (cur.PSL > ht_en->PSL)
+      if (cur.psl > ht_en->psl)
        {
          struct cache_ht_entry tmp_en = *ht_en;
          *ht_en = cur;
@@ -360,7 +360,7 @@ void ht_insert(struct bptr_cache *cache, bptr_node_t node_idx, uint64_t pool_idx
        }
 
       idx = (idx + 1) & ~(cache->ht_cap);
-      cur.PSL++;
+      cur.psl++;
     }
 }
 
@@ -377,9 +377,9 @@ static void ht_delete(struct bptr_cache *cache, bptr_node_t node_idx)
     {
       uint64_t next = (idx + 1) & ~(cache->ht_cap);
       ht_en = cache->ht + next;
-      if (ht_en->node_idx == 0 || ht_en->PSL == 0) break;
+      if (ht_en->node_idx == 0 || ht_en->psl == 0) break;
       cache->ht[idx] = *ht_en;
-      cache->ht[idx].PSL--;
+      cache->ht[idx].psl--;
       idx = next;
     }
    cache->ht[idx].node_idx = 0;
