@@ -116,57 +116,33 @@ FOPEN_ERR:       _set_err_code(BPTR_E_FACCESS);
 int bptr_io_fload(struct bptr *self, const char *filename)
 {
    uint32_t mvb_buf[3];
-   int err_code;
    char *memit;
 
    /* Open file */
    self->file = fopen(filename, "rb+");
-   if (self->file == NULL)
-    {
-      err_code = 1;
-      goto FOPEN_ERR;
-    }
+   if (self->file == NULL) goto FOPEN_ERR;
 
    /* Check magic, version and block size */
-   if (fread(mvb_buf, 4, 3, self->file) != 3)
-    {
-      err_code = 2;
-      goto MVB_READ_ERR;
-    }
+   if (fread(mvb_buf, 4, 3, self->file) != 3) goto MVB_READ_ERR;
    if (strncmp((const char*)mvb_buf, BPTR_MAGIC_STR, 4))
-    {
-      err_code = -1;
       goto MVB_INVALID_ERR;
-    }
    self->version = mvb_buf[1] & 0x7F;
    if (self->version != BPTR_CURRENT_VERSION)
-    {
-      err_code = -2;
       goto MVB_INVALID_ERR;
-    }
    self->is_lite = (mvb_buf[1] & 0x80) ? 1 : 0;
    self->node_size = mvb_buf[2];
    if (self->node_size < BPTR_NODE_METADATA_BYTE + 24)
-    {
-      err_code = -3;
       goto MVB_INVALID_ERR;
-    }
 
    /* malloc file buffer */
    self->fbuf = calloc(1, self->node_size);
    if (self->fbuf == NULL)
-    {
-      err_code = 3;
       goto FBUF_MALLOC_ERR;
-    }
 
    /* Read the header block */
    rewind(self->file);
    if (fread(self->fbuf, self->node_size, 1, self->file) != 1)
-    {
-      err_code = 4;
       goto READ_HEADER_BLOCK_ERR;
-    }
 
    /* load metadata in header block into handler */
    memit = self->fbuf + 12;
@@ -185,13 +161,17 @@ int bptr_io_fload(struct bptr *self, const char *filename)
 
    return 0;
 
-READ_HEADER_BLOCK_ERR:
+   /*-------------------------- Error Handling Zone --------------------------*/
+   _Bool has_set_err = 0;
+   int err_code;
+
+READ_HEADER_BLOCK_ERR: _set_err_code(BPTR_E_FACCESS);
    free(self->fbuf);
-FBUF_MALLOC_ERR:
-MVB_INVALID_ERR:
-MVB_READ_ERR:
+FBUF_MALLOC_ERR:       _set_err_code(BPTR_E_OOM);
+MVB_INVALID_ERR:       _set_err_code(BPTR_E_ITRNL_STATE);
+MVB_READ_ERR:          _set_err_code(BPTR_E_FACCESS);
    fclose(self->file);
-FOPEN_ERR:
+FOPEN_ERR:             _set_err_code(BPTR_E_FACCESS);
    return err_code;
 }
 
