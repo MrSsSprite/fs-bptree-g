@@ -6,7 +6,6 @@
 /*--------------------------- Public Includes END ----------------------------*/
 
 /*------------------------------ Public Macros -------------------------------*/
-#define _FILE_OFFSET_BITS 64  /* Ensures off_t is 64-bit on Linux/Unix */
 #include <stdio.h>
 #include <stdint.h>
 
