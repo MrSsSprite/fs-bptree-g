@@ -147,8 +147,10 @@ int bptr_io_fload(struct bptr *self, const char *filename)
    /* load metadata in header block into handler */
    memit = self->fbuf + 12;
    self->key_size = *(uint16_t*)memit;
+   if (self->key_size == 0) goto INVALID_KV_SIZE;
    memit += 2;
    self->value_size = *(uint16_t*)memit;
+   if (self->value_size == 0) goto INVALID_KV_SIZE;
    memit += 2;
    self->record_cnt = *(uint64_t*)memit;
    memit += 8;
@@ -165,6 +167,7 @@ int bptr_io_fload(struct bptr *self, const char *filename)
    _Bool has_set_err = 0;
    int err_code;
 
+INVALID_KV_SIZE:       _set_err_code(BPTR_E_ITRNL_STATE);
 READ_HEADER_BLOCK_ERR: _set_err_code(BPTR_E_FACCESS);
    free(self->fbuf);
 FBUF_MALLOC_ERR:       _set_err_code(BPTR_E_OOM);
