@@ -124,7 +124,7 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
 
    /* malloc for the handler */
    self = malloc(sizeof (struct bptr));
-   if (self == NULL) return NULL;
+   if (self == NULL) goto BPTR_MALLOC_ERR;
 
    if (bptr_io_fload(self, filename)) goto FLOAD_ERR;
    _bptr_bound_set(self);
