@@ -91,6 +91,7 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
 {
    struct bptr_cache *cache;
    uint_fast32_t node_buf_sz;
+   size_t pool_sz;
 
    // Necessary. the result of clz is undefined if input is 0.
    // Or, if msb is set, no valid value represented in uint64_t can contain it
@@ -129,7 +130,9 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
       node_buf_sz = (node_buf_sz + 7) & ~7;
    }
    cache->pool_en_sz = sizeof(struct cache_pool_entry) + node_buf_sz;
-   cache->pool = malloc(cache->pool_en_sz * cache->pool_cap);
+   pool_sz = cache->pool_en_sz * cache->pool_cap;
+   if (pool_sz > SIZE_MAX) goto INVALID_POOL_CAP_ERR;
+   cache->pool = malloc(pool_sz);
    if (cache->pool == NULL) goto POOL_MALLOC_ERR;
    cache->ht = malloc(sizeof(struct cache_ht_entry) * cache->ht_cap);
    if (cache->ht == NULL) goto HT_MALLOC_ERR;
@@ -157,13 +160,14 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
 
 __LAST_ERR__:
    free(cache->ht);
-HT_MALLOC_ERR:      _set_err_code(BPTR_E_OOM);
+HT_MALLOC_ERR:        _set_err_code(BPTR_E_OOM);
    free(cache->pool);
-POOL_MALLOC_ERR:    _set_err_code(BPTR_E_OOM);
-SIZE_TOO_LARGE_ERR: _set_err_code(BPTR_E_GT_MAXSIZE);
+POOL_MALLOC_ERR:      _set_err_code(BPTR_E_OOM);
+INVALID_POOL_CAP_ERR: _set_err_code(BPTR_E_GT_MAXSIZE);
+SIZE_TOO_LARGE_ERR:   _set_err_code(BPTR_E_GT_MAXSIZE);
    free(cache);
-MALLOC_ERR:         _set_err_code(BPTR_E_OOM);
-INVALID_INPUT:      _set_err_code(BPTR_E_FN_INPUT);
+MALLOC_ERR:           _set_err_code(BPTR_E_OOM);
+INVALID_INPUT:        _set_err_code(BPTR_E_FN_INPUT);
    return err_code;
 }
 
