@@ -31,7 +31,17 @@ int bptr_io_fcreat(struct bptr *self, const char *filename);
 
 /**
  * @brief   load an existing B+tree from a file
- * @return  0 on success. Otherwise, the error code is returned.
+ *
+ * This function loads and fills in fundamental informations about a B+Tree
+ * stored in an existing file.
+ *
+ * @return  Error Code
+ * @retval  0  Success
+ * @retval  BPTR_E_FACCESS       Failed on opening/reading the file.
+ * @retval  BPTR_E_ITRNL_STATE   Corrupted file (invalid value detected).
+ * @retval  BPTR_E_OOM           Failed on allocating space for @c fbuf
+ *
+ * @remark  On any failure, both @c fbuf and @c file members remains invalid.
  */
 int bptr_io_fload(struct bptr *self, const char *filename);
 
