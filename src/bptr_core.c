@@ -70,7 +70,8 @@ struct bptr *bptr_init
     * the metadata, 1 key and 2 childs */
    if (node_size < BPTR_NODE_METADATA_BYTE + key_size +
                    (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2 ||
-       cache_capacity < BPTR_CACHE_CAPACITY_MIN)
+       cache_capacity < BPTR_CACHE_CAPACITY_MIN ||
+       key_size == 0 || value_size == 0)
       goto INVALID_SIZE_ERR;
 
    /* malloc for the handler */
