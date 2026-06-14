@@ -122,6 +122,9 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
    struct bptr *self;
    int fn_ret;
 
+   if (cache_capacity < BPTR_CACHE_CAPACITY_MIN)
+      goto INVALID_INP_ERR;
+
    /* malloc for the handler */
    self = malloc(sizeof (struct bptr));
    if (self == NULL) goto BPTR_MALLOC_ERR;
@@ -145,6 +148,7 @@ INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
 FLOAD_ERR:           _set_errno(BPTR_E_FACCESS);
    free(self);
 BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
+INVALID_INP_ERR:     _set_errno(BPTR_E_FN_INPUT);
    return NULL;
 }
 
