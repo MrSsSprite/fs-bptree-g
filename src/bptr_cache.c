@@ -90,7 +90,7 @@ struct bptr_cache
 int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
 {
    struct bptr_cache *cache;
-   uint_fast32_t node_buf_sz;
+   uint64_t node_buf_sz;
    size_t pool_sz;
 
    // Necessary. the result of clz is undefined if input is 0.
@@ -120,12 +120,12 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
    cache->hash_shift = ds_clz(cache->ht_cap) + 1;
 
    {
-      size_t leaf_storage =
-         (self->node_bound.leaf.up - 1) * self->key_size +
-         (self->node_bound.leaf.up - 1) * self->value_size;
-      size_t brch_storage =
-         (self->node_bound.brch.up - 1) * self->key_size +
-         self->node_bound.brch.up * BPTR_PTR_SIZE;
+      uint64_t leaf_storage =
+         (uint64_t)(self->node_bound.leaf.up - 1) * self->key_size +
+         (uint64_t)(self->node_bound.leaf.up - 1) * self->value_size;
+      uint64_t brch_storage =
+         (uint64_t)(self->node_bound.brch.up - 1) * self->key_size +
+         (uint64_t)self->node_bound.brch.up * BPTR_PTR_SIZE;
       node_buf_sz = (leaf_storage > brch_storage ? leaf_storage : brch_storage);
       node_buf_sz = (node_buf_sz + 7) & ~7;
    }
