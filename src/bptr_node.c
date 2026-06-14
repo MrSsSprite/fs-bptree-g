@@ -362,7 +362,6 @@ void bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
       node->is_leaf = 0;
       node->vals = node->keys + (self->node_bound.brch.up - 1) * self->key_size;
     }
-   node->is_leaf = (node->level == 0);
    node->is_dirty = 0;
    iter_read(buf_it, node->keys,
             self->key_size * node->key_count);
