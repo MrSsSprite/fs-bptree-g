@@ -7,6 +7,22 @@
 /*--------------------------- Public Includes END ----------------------------*/
 
 /*----------------------------- Public Functions -----------------------------*/
+/**
+ * @brief   Initialize cache and put it into @p self
+ *
+ * @param[in,out] self  bptr struct that will hold the initialized @c cache.
+ *                      Also, this function reads @c node_bound from this
+ *                      struct.
+ * @param[in]     pool_cap cache pool capacity in # of nodes.
+ *
+ * @return  error code
+ * @retval  0  Success
+ * @retval  BPTR_E_OOM  Memory allocation error
+ * @retval  BPTR_E_GT_MAXSIZE @p pool_cap too large
+ * @retval  BPTR_E_FN_INPUT   Invalid @p pool_cap
+ *
+ * @note @p self->node_bound should be set before calling this function.
+ */
 int bptr_cache_init(struct bptr *self, uint64_t pool_cap);
 int bptr_cache_deinit(struct bptr *self);
 struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
