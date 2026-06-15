@@ -131,25 +131,17 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
    }
    cache->pool_en_sz = sizeof(struct cache_pool_entry) + node_buf_sz;
    pool_sz = cache->pool_en_sz * cache->pool_cap;
-   if (pool_sz > SIZE_MAX) goto INVALID_POOL_CAP_ERR;
-   cache->pool = malloc(pool_sz);
+   cache->pool = calloc(cache->pool_cap, cache->pool_en_sz);
    if (cache->pool == NULL) goto POOL_MALLOC_ERR;
-   cache->ht = malloc(sizeof(struct cache_ht_entry) * cache->ht_cap);
+   cache->ht = calloc(cache->ht_cap, sizeof(struct cache_ht_entry));
    if (cache->ht == NULL) goto HT_MALLOC_ERR;
+   // Both pool and ht are 0 initialized.
+   // cache->ht[i].node_idx == 0 : Empty
+   // GET_POOL_EN(cache, i)->refcnt == 0 : EMPTY
 
    cache->pool_sz = 0;
    cache->pool_free = 0;
    cache->evict_head = cache->evict_tail = 0;
-
-   // 0 Initialize buffers
-   for (uint64_t i = 0; i < cache->ht_cap; i++)
-      cache->ht[i].node_idx = 0;
-   for (struct cache_pool_entry *pool_en = cache->pool,
-                                *pool_ed = POOL_EN_ED(cache);
-        pool_en < pool_ed; pool_en = POOL_EN_INCR(cache, pool_en))
-      pool_en->refcnt = 0;
-   // Entire block of memory free
-   cache->pool->evict_next = 0;
 
    self->cache = cache;
    return 0;
@@ -163,7 +155,6 @@ __LAST_ERR__:
 HT_MALLOC_ERR:        _set_err_code(BPTR_E_OOM);
    free(cache->pool);
 POOL_MALLOC_ERR:      _set_err_code(BPTR_E_OOM);
-INVALID_POOL_CAP_ERR: _set_err_code(BPTR_E_GT_MAXSIZE);
 SIZE_TOO_LARGE_ERR:   _set_err_code(BPTR_E_GT_MAXSIZE);
    free(cache);
 MALLOC_ERR:           _set_err_code(BPTR_E_OOM);
