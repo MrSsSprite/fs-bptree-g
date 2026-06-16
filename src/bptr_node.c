@@ -235,6 +235,18 @@ uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
 static inline
 int _node_promote(struct bptr *self, struct bptr_node *par_n,
                   struct bptr_node *prm_n, const void *key);
+
+
+/**
+ * @brief   Free a node and Drop all changes
+ *
+ * @param[in,out] self  bptr obj.
+ * @param[in]     node  target node to be droped.
+ *
+ * @return  error code
+ */
+static inline
+int _node_drop(struct bptr *self, struct bptr_node *node);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -606,31 +618,19 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    bptr_node_t ret;
 
    // Check full; error if not already full
-   if (node->key_count != max_sz)
-    { bptr_errno = -1; goto PRE_WORK_ERR; }
+   if (node->key_count != max_sz) goto PRE_WORK_ERR;
 
    /*{--------------- Pre-Work: Find low bound of new element ----------------*/
    new_elem_idx = _node_key_search(self, node, key);
    // newly inserted element should not match with another existing element
-   if (bptr_errno == 0) { bptr_errno = -2; goto PRE_WORK_ERR; }
+   if (bptr_errno == 0) goto PRE_WORK_ERR;
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
    /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
    if (node->parent == 0)
     {
       parent_n = bptr_node_new(self, 0);
-      if (parent_n == NULL)
-       {
-         switch (bptr_errno)
-          {
-         case BPTR_E_OOM:
-         case 2:
-            break;
-         default:
-            bptr_errno = BPTR_E_UNREACHABLE; break;
-          }
-         goto PAR_N_LOAD_ERR;
-       }
+      if (parent_n == NULL) goto PAR_N_LOAD_ERR;
 
       has_new_parent = 1;
       // node was root as it has no parent
@@ -644,50 +644,24 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     {
       has_new_parent = 0;
       parent_n = bptr_node_fetch(self, node->parent);
-      if (parent_n == NULL)
-       {
-         switch (bptr_errno)
-          {
-         case BPTR_E_OOM:  break;
-         case -1:
-            bptr_errno = 200; break;
-         default:
-            bptr_errno = BPTR_E_UNREACHABLE; break;
-          }
-         goto PAR_N_LOAD_ERR;
-       }
+      if (parent_n == NULL) goto PAR_N_LOAD_ERR;
     }
    /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
 
    /*{-------------------- Pre-work: Init new empty node ---------------------*/
    new_n = bptr_node_new(self, node->parent);
-   if (new_n == NULL) { bptr_errno = 201; goto NEW_N_MALLOC_ERR; };
+   if (new_n == NULL) goto NEW_N_MALLOC_ERR;
    /*}-------------------- Pre-work: Init new empty node ---------------------*/
 
    /*{--------------------- Pre-Work: Update prev, next ----------------------*/
    // update new_n->next->prev
    if (node->next)
     {
-      next_n = bptr_node_load(self, node->next);
-      if (next_n == NULL)
-       {
-         switch (bptr_errno)
-          {
-         case BPTR_E_OOM:  break;
-         case -1:
-            bptr_errno = 200; break;
-         default:
-            bptr_errno = BPTR_E_UNREACHABLE; break;
-          }
-         goto NEXT_N_UPDATE_ERROR;
-       }
+      next_n = bptr_node_fetch(self, node->next);
+      if (next_n == NULL) goto NEXT_N_UPDATE_ERROR;
       next_n->prev = new_n->node_idx;
       next_n->is_dirty = 1;
-      if (bptr_node_unload(self, next_n))
-       {
-         bptr_node_free(next_n);
-         bptr_errno = 200; goto NEXT_N_UPDATE_ERROR;
-       }
+      bptr_node_unload(self, next_n);
     }
 
    new_n->next = node->next;
@@ -754,13 +728,13 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
           {
             BPTR_LITE_PTR_TYPE n_idx = new_n->node_idx;
             if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
-             { bptr_errno = 202; goto PAR_SPLIT_ERR; }
+               goto PAR_SPLIT_ERR;
           }
          else
           {
             BPTR_NORM_PTR_TYPE n_idx = new_n->node_idx;
             if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
-             { bptr_errno = 202; goto PAR_SPLIT_ERR; }
+               goto PAR_SPLIT_ERR;
           }
        }
       else
@@ -791,7 +765,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
          if (_node_promote(self, parent_n, new_n,
                            (char*)node->keys + node->key_count - 1))
-          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
+            goto PAR_SPLIT_ERR;
 
          node->key_count--;
          _node_key_insert(self, node, key, new_elem_idx);
@@ -805,7 +779,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
          if (_node_promote(self, parent_n,
                            new_n, (char*)node->keys + node->key_count))
-          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
+            goto PAR_SPLIT_ERR;
 
          // Before new elem
          offset = node->key_count + 1;
@@ -843,8 +817,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
       else
        { // new_elem_idx == okc
-         if (_node_promote(self, parent_n, new_n, key))
-          { bptr_errno = 202; goto PAR_SPLIT_ERR; }
+         if (_node_promote(self, parent_n, new_n, key)) goto PAR_SPLIT_ERR;
 
          memcpy(new_n->keys,
                 (char*)node->keys + new_elem_idx * self->key_size,
@@ -859,27 +832,24 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
-   if (bptr_node_unload(self, parent_n))
-    { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
+   bptr_node_unload(self, parent_n);
    ret = new_n->node_idx;
-   if (bptr_node_unload(self, new_n))
-    { bptr_errno = 203; goto FINISH_TOUCH_ERR; }
+   bptr_node_unload(self, new_n);
    self->record_cnt++;
    self->node_cnt++;
    return ret;
 
 /*--------------------------- Error Handling Zone ----------------------------*/
+   _Bool has_set_err = 0;
+
 // restore back to the state before fn call on error
-FINISH_TOUCH_ERR:
-PAR_SPLIT_ERR:
-NEXT_N_UPDATE_ERROR:
-   bptr_node_vacate(self, new_n);
-   bptr_node_free(new_n);
-NEW_N_MALLOC_ERR:
+PAR_SPLIT_ERR:       has_set_err = 1;
+NEXT_N_UPDATE_ERROR: has_set_err = 1;
+   _node_drop(self, new_n);
+NEW_N_MALLOC_ERR:    has_set_err = 1;
    if (has_new_parent)
     {
-      bptr_node_vacate(self, parent_n);
-      bptr_node_free(parent_n);
+      _node_drop(self, parent_n);
       self->height--;
       node->parent = 0;
       self->root_idx = node->node_idx;
@@ -890,8 +860,8 @@ NEW_N_MALLOC_ERR:
       node->key_count = max_sz;
       bptr_node_unload(self, parent_n);
     }
-PAR_N_LOAD_ERR:
-PRE_WORK_ERR:
+PAR_N_LOAD_ERR:   has_set_err = 1;
+PRE_WORK_ERR:     _set_errno(BPTR_E_FN_INPUT);
    return 0;
 }
 
@@ -907,7 +877,7 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
 #define _node_prm_split_par(type) do \
 { \
    type n_idx = prm_n->node_idx; \
-   if (bptr_node_split(self, par_n, key, &n_idx) == 0) return 200; \
+   if (bptr_node_split(self, par_n, key, &n_idx) == 0) return bptr_errno; \
 } while (0)
 
       if (self->is_lite)
@@ -926,5 +896,14 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
       par_n->key_count++;
     }
    return 0;
+}
+
+
+static inline
+int _node_drop(struct bptr *self, struct bptr_node *node)
+{
+   int err_code = bptr_node_vacate(self, node->node_idx);
+   bptr_cache_reclaim(self, node);
+   return err_code;
 }
 /*-------------------------- Private Functions END ---------------------------*/
