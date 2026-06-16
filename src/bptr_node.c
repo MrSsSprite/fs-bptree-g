@@ -643,7 +643,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    else
     {
       has_new_parent = 0;
-      parent_n = bptr_node_load(self, node->parent);
+      parent_n = bptr_node_fetch(self, node->parent);
       if (parent_n == NULL)
        {
          switch (bptr_errno)
