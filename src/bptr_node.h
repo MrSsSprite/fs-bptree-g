@@ -75,6 +75,7 @@ void bptr_node_unload(struct bptr *self, struct bptr_node *node);
  * @see     bptr_io_flush_node
  */
 int bptr_node_flush(struct bptr *self, struct bptr_node *node);
+struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
 /*--------------------------- Public Functions END ---------------------------*/
 
 
