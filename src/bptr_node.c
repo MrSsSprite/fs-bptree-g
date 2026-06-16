@@ -2,7 +2,8 @@
 #include "bptr_node.h"
 #include "bptr_internal.h"
 #include "bptr_io.h"
-#include <stdlib.h>
+#include "bptr_cache.h"
+#include "bptr_utils.h"
 #include <string.h>
 /*--------------------------- Private Includes END ---------------------------*/
 
@@ -46,24 +47,6 @@
    (iter) += sizeof(type); \
 } while (0)
 
-#define _node_kv_malloc(self, node) do \
-{ \
-   if ((node)->is_leaf) \
-    { \
-      (node)->keys = \
-         malloc(((self)->node_bound.leaf.up - 1) * (self)->key_size); \
-      (node)->vals = \
-         malloc(((self)->node_bound.leaf.up - 1) * (self)->value_size); \
-    } \
-   else \
-    { \
-      (node)->keys = \
-         malloc(((self)->node_bound.brch.up - 1) * (self)->key_size); \
-      (node)->vals = \
-         malloc((self)->node_bound.brch.up * BPTR_PTR_SIZE); \
-    } \
-} while (0)
-
 #define _node_val_size(self, node) \
    ((node)->is_leaf ? (self)->value_size : \
                       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
@@ -93,9 +76,6 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
  *
  * @param[in,out] self  bptr obj.
  * @param[out]    node  node obj. to hold the deserialized data
- * @return        error code
- * @retval  0     success
- * @retval  1     malloc error
  *
  * @warning    This function allocates memory for node->keys and node->vals;
  *             thence, these two members should not have exclusive ownership
@@ -105,7 +85,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node);
  *             adopted as it's shorter.
  */
 static inline
-int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
+void bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   preallocate node-sized space in file
  *
@@ -127,21 +107,16 @@ bptr_node_t bptr_node_prealloc (struct bptr *self);
  * This function releases the file space allocated for the node (identified by
  * @c node->node_idx ) and returns it back to internal free list.
  *
- * @param[in,out] self  bptr obj. Only @c fbuf and @c free_list fields will be
- *                      modified.
- * @param[in]     node  node to which the file space is allocated
+ * @param[in,out] self     bptr obj. Only @c fbuf and @c free_list fields will
+ *                         be modified.
+ * @param[in]     node_idx node to which the file space is allocated
  * @return  status_code
  * @retval  0           success
- * @retval  2           failed during io flush. @c bptr_io_flush_node sets
- *                      @c bptr_errno
- *
- * @warning @c node->node_idx is @b not modified by this function. In other
- *          words, it still ref. to released space. The caller is responsible
- *          for nulling the index or discarding the node to prevent accidental
- *          use of vacated space.
+ * @retval  non-0       failed during io flush. Returns what
+ *                      @c bptr_io_flush_node returns.
  */
 static inline
-int bptr_node_vacate(struct bptr *self, struct bptr_node *node);
+int bptr_node_vacate(struct bptr *self, bptr_node_t node_idx);
 /**
  * @brief   Insert a key into keys
  *
@@ -267,120 +242,110 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
 // node->{prev, next} are left uninitialized; the
 // caller is responsible to write that
 // if parent == 0, self->height is incremented
+// checksum is also uninitialized
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent)
 {
-   uint16_t flags;
-   struct bptr_node *node;
+   bptr_node_t file_slot;
+   struct bptr_node *node, *parent_n;
 
-   // zero-initialize to avoid valgrind warning on uninitialized padding bits
-   node = calloc(1, sizeof(struct bptr_node));
-   if (node == NULL)
-    { bptr_errno = 1; goto NODE_MALLOC_ERR; }
+   file_slot = bptr_node_prealloc(self);
+   if (file_slot == 0) goto PREALLOC_ERR;
+
+   node = bptr_cache_alloc(self, file_slot);
+   if (node == NULL) goto CACHE_ALLOC_ERR;
 
    if (parent)
     {
-      struct bptr_node *parent_node = bptr_node_load(self, parent);
-      if (parent_node == NULL)
-       { bptr_errno = 2; goto LOAD_PARENT_ERR; }
-      node->level = parent_node->level - 1;
-      if (bptr_node_unload(self, parent_node))
-       { bptr_errno = 200; goto LOAD_PARENT_ERR; }
+      parent_n = bptr_node_fetch(self, parent);
+      if (parent_n == NULL) goto PARENT_LOAD_ERR;
+      node->level = parent_n->level - 1;
+      bptr_node_unload(self, parent_n);
     }
    else
       // if parent == 0, root split
       node->level = self->height++;
-   flags = BPTR_NODE_FLAG_VALID;
+
+   node->flags = BPTR_NODE_FLAG_VALID;
    if (node->level == 0)
     {
-      flags |= BPTR_NODE_FLAG_LEAF;
+      node->flags |= BPTR_NODE_FLAG_LEAF;
       node->is_leaf = 1;
+      node->vals = node->keys + (self->node_bound.leaf.up - 1) * self->key_size;
     }
    else
+    {
       node->is_leaf = 0;
-   node->flags = flags;
+      node->vals = node->keys + (self->node_bound.brch.up - 1) * self->key_size;
+    }
    node->is_dirty = 1;
    node->key_count = 0;
    node->parent = parent;
-   node->node_idx = bptr_node_prealloc(self);
-   if (node->node_idx == 0) goto PREALLOC_ERR;
-   _node_kv_malloc(self, node);
-   if (node->keys == NULL || node->vals == NULL)
-    { bptr_errno = 1; goto KV_MALLOC_ERR; }
-   /* TODO: checksum */
+   node->node_idx = file_slot;
 
    return node;
 
-KV_MALLOC_ERR:
-   free(node->vals);
-   free(node->keys);
-PREALLOC_ERR:
-   free(node);
-LOAD_PARENT_ERR:
-NODE_MALLOC_ERR:
+   /*-------------------------- Error Handling Zone --------------------------*/
+   _Bool has_set_err = 0;
+   int err_code;
+
+PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
+bptr_cache_reclaim(self, node);
+CACHE_ALLOC_ERR:  _set_err_code(bptr_errno);
+                  if (bptr_node_vacate(self, file_slot))
+                     perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
+PREALLOC_ERR:  _set_err_code(bptr_errno);
+
+               bptr_errno = err_code;
    return NULL;
 }
 
 
-void bptr_node_free(struct bptr_node *node)
+void bptr_node_unload(struct bptr *self, struct bptr_node *node)
+{ bptr_cache_release(self, node); }
+
+
+int bptr_node_load
+ (struct bptr *self, bptr_node_t node_idx, struct bptr_node *node)
 {
-   free(node->keys); free(node->vals);
-   free(node);
-}
-
-
-int bptr_node_unload(struct bptr *self, struct bptr_node *node)
-{
-   // TODO: checksum; below is merely temporary placeholder
-   node->checksum = 0;
-   //TODO: involve cache mechanism
-   if (node->is_dirty && bptr_node_flush(self, node) == 0)
-      return 2;
-   bptr_node_free(node);
-   return 0;
-}
-
-
-struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx)
-{
-   struct bptr_node *node;
-
-   node = malloc(sizeof(struct bptr_node));
    if (node == NULL)
-    {
-      bptr_errno = 1;
-      goto NODE_MALLOC_ERR;
-    }
+      goto INVALID_NODE;
 
    // Read into fbuf
    if (bptr_io_fread_node(self, node_idx))
-    {
-      bptr_errno = -1;
       goto FREAD_NODE_ERR;
-    }
 
-   if (bptr_node_unmarshal(self, node))
-    {
-      bptr_errno = 1;
-      goto UNMARSHAL_ERR;
-    }
-   node->is_dirty = 0;
+   bptr_node_unmarshal(self, node);
    node->node_idx = node_idx;
 
-   return node;
+   return 0;
 
-UNMARSHAL_ERR:
-FREAD_NODE_ERR:
-   free(node);
-NODE_MALLOC_ERR:
-   return NULL;
+   /*-------------------------- Error Handling Area --------------------------*/
+   int err_code;
+   _Bool has_set_err = 0;
+FREAD_NODE_ERR:   _set_err_code(BPTR_E_FACCESS);
+INVALID_NODE:     _set_err_code(BPTR_E_FN_INPUT);
+   return err_code;
 }
 
 
-bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node)
+int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 {
+   int fn_err;
+
    bptr_node_marshal(self, node);
-   return bptr_io_flush_node(self, node->node_idx);
+   fn_err = bptr_io_flush_node(self, node->node_idx);
+   if (fn_err) goto FLUSH_ERR;
+   node->is_dirty = 0;
+
+   return 0;
+
+   /*-------------------------- Error Handling Area --------------------------*/
+   int err_code;
+   _Bool has_set_err = 0;
+
+FLUSH_ERR:  _set_err_code(fn_err);
+   return err_code;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
@@ -413,7 +378,7 @@ void bptr_node_marshal(struct bptr *self, struct bptr_node *node)
 
 
 static inline
-int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
+void bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 {
    void *buf_it = self->fbuf;
 
@@ -431,19 +396,20 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node)
 #undef _READ_FIELDS
    buf_it = (char*)self->fbuf + BPTR_NODE_METADATA_BYTE;
 
-   node->is_leaf = (node->level == 0);
-   node->is_dirty = 0;
-   _node_kv_malloc(self, node);
-   if (node->keys == NULL || node->vals == NULL)
+   if (node->level == 0)
     {
-      free(node->keys); free(node->vals);
-      return 1;
+      node->is_leaf = 1;
+      node->vals = node->keys + (self->node_bound.leaf.up - 1) * self->key_size;
     }
+   else
+    {
+      node->is_leaf = 0;
+      node->vals = node->keys + (self->node_bound.brch.up - 1) * self->key_size;
+    }
+   node->is_dirty = 0;
    iter_read(buf_it, node->keys,
             self->key_size * node->key_count);
    iter_read(buf_it, node->vals, _node_val_arr_size(self, node));
-
-   return 0;
 }
 
 static
@@ -487,7 +453,7 @@ bptr_node_t bptr_node_prealloc (struct bptr *self)
 
 
 static inline
-int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
+int bptr_node_vacate(struct bptr *self, bptr_node_t node_idx)
 #define _WRITE_FL_HEAD(T) do \
 { \
       T head = self->free_list.head; \
@@ -496,6 +462,7 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
 {
    uint16_t flags = 0;
    void *buf_it = self->fbuf;
+   int fn_err;
 
    iter_write(buf_it, &flags, 2);
 
@@ -505,10 +472,10 @@ int bptr_node_vacate(struct bptr *self, struct bptr_node *node)
       _WRITE_FL_HEAD(BPTR_NORM_PTR_TYPE);
 #undef _WRITE_FL_HEAD
 
-   if (bptr_io_flush_node(self, node->node_idx) == 0)
-      return 2;   // bptr_io_flush_node sets bptr_errno
+   fn_err = bptr_io_flush_node(self, node_idx);
+   if (fn_err) return fn_err;
 
-   self->free_list.head = node->node_idx;
+   self->free_list.head = node_idx;
    self->free_list.cnt++;
    return 0;
 }
