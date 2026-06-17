@@ -115,6 +115,7 @@ FOPEN_ERR:       _set_err_code(BPTR_E_FACCESS);
 
 int bptr_io_fload(struct bptr *self, const char *filename)
 {
+   _Bool has_set_err = 0;
    uint32_t mvb_buf[3];
    char *memit;
 
@@ -164,7 +165,6 @@ int bptr_io_fload(struct bptr *self, const char *filename)
    return 0;
 
    /*-------------------------- Error Handling Zone --------------------------*/
-   _Bool has_set_err = 0;
    int err_code;
 
 INVALID_KV_SIZE:       _set_err_code(BPTR_E_ITRNL_STATE);
@@ -222,6 +222,7 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 
 int bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 {
+   _Bool has_set_err = 0;
    bptr_off_t pos;
 
    
@@ -247,7 +248,6 @@ int bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx)
 
    /*-------------------------- Error Handling Zone --------------------------*/
    int err_code;
-   _Bool has_set_err = 0;
 
 FACCESS_ERR:         _set_err_code(BPTR_E_FACCESS);
 INVALID_INPUT_ERR:   _set_err_code(BPTR_E_FN_INPUT);

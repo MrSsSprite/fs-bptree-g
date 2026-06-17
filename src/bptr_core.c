@@ -64,6 +64,7 @@ struct bptr *bptr_init
    int (*compare)(const void *lhs, const void *rhs)
 )
 {
+   _Bool has_set_err = 0;
    struct bptr *self;
 
    /* Node must be large enough to at least contain
@@ -94,14 +95,12 @@ struct bptr *bptr_init
    if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
 
    /* Construct the file */
-   if (bptr_io_fcreat(self, filename)) 
+   if (bptr_io_fcreat(self, filename))
       goto FOPEN_ERR;
 
    return self;
 
 /* Error Handle */
-   _Bool has_set_err = 0;
-
    // TODO: fclose Error handle
    bptr_io_fclose(self);
 FOPEN_ERR:           _set_errno(BPTR_E_FACCESS);
@@ -119,6 +118,7 @@ INVALID_SIZE_ERR:    _set_errno(BPTR_E_FN_INPUT);
 struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs))
 {
+   _Bool has_set_err = 0;
    struct bptr *self;
    int fn_ret;
 
@@ -138,8 +138,6 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
    return self;
 
    /*-------------------------- Error Handling Zone --------------------------*/
-   _Bool has_set_err = 0;
-
    //TODO: deinit Error handle
    bptr_cache_deinit(self);
 CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
@@ -154,6 +152,7 @@ INVALID_INP_ERR:     _set_errno(BPTR_E_FN_INPUT);
 
 int bptr_unload(struct bptr *self)
 {
+   _Bool has_set_err = 0;
    int fn_err;
 
    fn_err = bptr_cache_deinit(self);
@@ -166,7 +165,6 @@ int bptr_unload(struct bptr *self)
    return 0;
 
    /*-------------------------- Error Handling Zone --------------------------*/
-   _Bool has_set_err = 0;
    int err_code;
 
 CACHE_DEINIT_ERR: _set_err_code(fn_err);
