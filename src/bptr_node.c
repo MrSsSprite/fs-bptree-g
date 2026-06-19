@@ -258,6 +258,7 @@ int _node_drop(struct bptr *self, struct bptr_node *node);
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent)
 {
+   _Bool has_set_err = 0;
    bptr_node_t file_slot;
    struct bptr_node *node, *parent_n;
 
@@ -298,7 +299,6 @@ struct bptr_node *bptr_node_new
    return node;
 
    /*-------------------------- Error Handling Zone --------------------------*/
-   _Bool has_set_err = 0;
    int err_code;
 
 PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
@@ -320,6 +320,8 @@ void bptr_node_unload(struct bptr *self, struct bptr_node *node)
 int bptr_node_load
  (struct bptr *self, bptr_node_t node_idx, struct bptr_node *node)
 {
+   _Bool has_set_err = 0;
+
    if (node == NULL)
       goto INVALID_NODE;
 
@@ -334,7 +336,7 @@ int bptr_node_load
 
    /*-------------------------- Error Handling Area --------------------------*/
    int err_code;
-   _Bool has_set_err = 0;
+
 FREAD_NODE_ERR:   _set_err_code(BPTR_E_FACCESS);
 INVALID_NODE:     _set_err_code(BPTR_E_FN_INPUT);
    return err_code;
@@ -343,6 +345,7 @@ INVALID_NODE:     _set_err_code(BPTR_E_FN_INPUT);
 
 int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 {
+   _Bool has_set_err = 0;
    int fn_err;
 
    bptr_node_marshal(self, node);
@@ -354,7 +357,6 @@ int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 
    /*-------------------------- Error Handling Area --------------------------*/
    int err_code;
-   _Bool has_set_err = 0;
 
 FLUSH_ERR:  _set_err_code(fn_err);
    return err_code;

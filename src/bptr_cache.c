@@ -89,6 +89,7 @@ struct bptr_cache
 /*----------------------------- Public Functions -----------------------------*/
 int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
 {
+   _Bool has_set_err = 0;
    struct bptr_cache *cache;
    uint64_t node_buf_sz;
    size_t pool_sz;
@@ -147,7 +148,6 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
    return 0;
 
    /*========================== Error Handling Zone ==========================*/
-   _Bool has_set_err = 0;
    int err_code;
 
 __LAST_ERR__:
@@ -191,6 +191,7 @@ int bptr_cache_deinit(struct bptr *self)
 
 struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
 {
+   _Bool has_set_err = 0;
    struct bptr_cache *cache = self->cache;
    struct cache_pool_entry *pool_en;
    uint64_t pool_idx;
@@ -243,7 +244,6 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx)
    return &pool_en->node;
 
    /*-------------------------- Error Handling Area --------------------------*/
-   _Bool has_set_err = 0;
 
 NODE_LOAD_ERR:  _set_errno(fn_err);
    pool_free_push(cache, pool_idx); // return to free pool even from eviction
@@ -260,6 +260,7 @@ EVICT_ERR:      _set_errno(BPTR_E_CACHE_FULL);
 // This function does not update ht as node_idx is not known yet.
 struct bptr_node *bptr_cache_alloc(struct bptr *self, bptr_node_t node_idx)
 {
+   _Bool has_set_err = 0;
    struct bptr_cache *cache = self->cache;
    struct cache_pool_entry *pool_en;
    uint64_t pool_idx;
@@ -291,7 +292,6 @@ struct bptr_node *bptr_cache_alloc(struct bptr *self, bptr_node_t node_idx)
    return &pool_en->node;
 
    /*-------------------------- Error Handling Area --------------------------*/
-   _Bool has_set_err = 0;
 
    if (0)   // enters only on jump
     {
