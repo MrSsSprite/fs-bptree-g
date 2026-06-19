@@ -611,6 +611,7 @@ BPTR_STATIC
 bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val)
 {
+   _Bool has_set_err = 0;
    // TODO: replace error codes magic # with manifest constant
    struct bptr_node *new_n, *parent_n, *next_n;
    _Bool has_new_parent;
@@ -842,8 +843,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    return ret;
 
 /*--------------------------- Error Handling Zone ----------------------------*/
-   _Bool has_set_err = 0;
-
 // restore back to the state before fn call on error
 PAR_SPLIT_ERR:       has_set_err = 1;
 NEXT_N_UPDATE_ERROR: has_set_err = 1;
