@@ -87,7 +87,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    char *memit;
 
    /* Create file */
-   self->file = fopen(filename, "wbx+");
+   self->file = fopen(filename, "w+bx");
    if (self->file == NULL)
       goto FOPEN_ERR;
    /* malloc for file buffer */
@@ -211,7 +211,7 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 {
    bptr_off_t offset = node_idx * self->node_size;
 
-   
+
    if (fseek64(self->file, offset, SEEK_SET))
       return BPTR_E_FSEEK;
 
