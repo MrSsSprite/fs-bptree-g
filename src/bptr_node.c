@@ -255,6 +255,7 @@ int _node_drop(struct bptr *self, struct bptr_node *node);
 // caller is responsible to write that
 // if parent == 0, self->height is incremented
 // checksum is also uninitialized
+// self->node_cnt is NOT updated
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent)
 {
