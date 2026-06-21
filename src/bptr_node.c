@@ -643,6 +643,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       _node_child_insert(self, parent_n, node->node_idx, 0);
       node->parent = parent_n->node_idx;
       self->root_idx = parent_n->node_idx;
+      self->node_cnt++;
     }
    else
     {
@@ -853,6 +854,7 @@ NEW_N_MALLOC_ERR:    has_set_err = 1;
     {
       _node_drop(self, parent_n);
       self->height--;
+      self->node_cnt--;
       node->parent = 0;
       self->root_idx = node->node_idx;
     }
