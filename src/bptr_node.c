@@ -120,7 +120,7 @@ int bptr_node_unmarshal(struct bptr *self, struct bptr_node *node);
  *          calculated thru. `ret * self->node_size`.
  */
 BPTR_STATIC inline
-bptr_node_t bptr_node_prealloc (struct bptr *self);
+bptr_node_t bptr_node_prealloc(struct bptr *self);
 /**
  * @brief   Vacate the file space occupied by the node.
  *
