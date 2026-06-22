@@ -71,8 +71,8 @@
 #define _node_val_arr_size(self, node) \
    ((node)->is_leaf ? \
       (self)->value_size * (node)->key_count : \
-      ((self)->is_lite ? BPTR_LITE_PTR_BYTE : \
-                         BPTR_NORM_PTR_BYTE * ((node)->key_count + 1)))
+      ((self)->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * \
+         ((node)->key_count + 1))
 /*---------------------------- Private Macro END -----------------------------*/
 
 
