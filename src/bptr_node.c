@@ -765,8 +765,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          // => okc = up - nvc
          // cp okc, nvc
          memcpy(new_n->vals,
-                (char*)node->vals + self->value_size * node->key_count,
-                (size_t)self->value_size * (new_n->key_count + 1));
+                (char*)node->vals + BPTR_PTR_SIZE * node->key_count,
+                (size_t)BPTR_PTR_SIZE * (new_n->key_count + 1));
 
          if (_node_promote(self, parent_n, new_n,
                            (char*)node->keys + node->key_count - 1))
@@ -794,17 +794,17 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          memcpy(kdst, (char*)node->keys + offset_b, cnt_b);
          kdst += cnt_b;
          // offset unchanged as keys has prm as buffer
-         offset_b = offset * self->value_size;
+         offset_b = offset * BPTR_PTR_SIZE;
          // cnt_val = (nei + 1) - (okc + 1) = cnt_key + 1
-         cnt_b = ++cnt * self->value_size;
+         cnt_b = ++cnt * BPTR_PTR_SIZE;
          memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
          vdst += cnt_b;
 
          // New elem
          memcpy(kdst, key, self->key_size);
          kdst += self->key_size;
-         memcpy(vdst, val, self->value_size);
-         vdst += self->value_size;
+         memcpy(vdst, val, BPTR_PTR_SIZE);
+         vdst += BPTR_PTR_SIZE;
 
          // After new elem
          offset = new_elem_idx;
@@ -816,8 +816,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          offset = new_elem_idx + 1;
          // cnt_v = mx_v - offset = (mx_k + 1) - (nei_k + 1) = mx - nei
          cnt = max_sz - new_elem_idx;
-         offset_b = offset * self->value_size;
-         cnt_b = cnt * self->value_size;
+         offset_b = offset * BPTR_PTR_SIZE;
+         cnt_b = cnt * BPTR_PTR_SIZE;
          memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
        }
       else
@@ -828,11 +828,11 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (char*)node->keys + new_elem_idx * self->key_size,
                 (size_t)self->key_size * new_n->key_count);
 
-         memcpy(new_n->vals, val, self->value_size);
+         memcpy(new_n->vals, val, BPTR_PTR_SIZE);
          // nei_v = nei_k + 1
-         memcpy((char*)new_n->vals + self->value_size,
-                (char*)node->vals + (new_elem_idx + 1) * self->value_size,
-                (size_t)self->value_size * new_n->key_count);
+         memcpy((char*)new_n->vals + BPTR_PTR_SIZE,
+                (char*)node->vals + (new_elem_idx + 1) * BPTR_PTR_SIZE,
+                (size_t)BPTR_PTR_SIZE * new_n->key_count);
        }
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
