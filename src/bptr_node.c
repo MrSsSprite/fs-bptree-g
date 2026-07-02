@@ -750,7 +750,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          parent_n->key_count++;
        }
     }
-   else
+   else  // internal node
     {
       node->key_count = self->node_bound.brch.up / 2;
       new_n->key_count = self->node_bound.brch.up - node->key_count - 1;
@@ -834,6 +834,16 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (char*)node->vals + (new_elem_idx + 1) * BPTR_PTR_SIZE,
                 (size_t)BPTR_PTR_SIZE * new_n->key_count);
        }
+
+      // update parent member of children that are assigned new_n
+      for (uint32_t new_i = 0; new_i < new_n->key_count; new_i++)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
+         if (child_n == NULL) goto CHILD_N_UPDATE_ERR;
+         child_n->parent = new_n->node_idx;
+         bptr_node_unload(self, child_n);
+       }
     }
    /*}------------------------ Main-Work: Split node -------------------------*/
 
@@ -846,7 +856,10 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
 /*--------------------------- Error Handling Zone ----------------------------*/
 // restore back to the state before fn call on error
+CHILD_N_UPDATE_ERR:  has_set_err = 1;
+   // TODO: children point back to old node
 PAR_SPLIT_ERR:       has_set_err = 1;
+   node->key_count = max_sz;
 NEXT_N_UPDATE_ERROR: has_set_err = 1;
    _node_drop(self, new_n);
 NEW_N_MALLOC_ERR:    has_set_err = 1;
@@ -859,11 +872,7 @@ NEW_N_MALLOC_ERR:    has_set_err = 1;
       self->root_idx = node->node_idx;
     }
    else
-    {
-      // undo all modifications
-      node->key_count = max_sz;
       bptr_node_unload(self, parent_n);
-    }
 PAR_N_LOAD_ERR:   has_set_err = 1;
 PRE_WORK_ERR:     _set_errno(BPTR_E_FN_INPUT);
    return 0;
