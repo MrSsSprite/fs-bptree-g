@@ -842,6 +842,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
             bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
          if (child_n == NULL) goto CHILD_N_UPDATE_ERR;
          child_n->parent = new_n->node_idx;
+         child_n->is_dirty = 1;
          bptr_node_unload(self, child_n);
        }
     }
