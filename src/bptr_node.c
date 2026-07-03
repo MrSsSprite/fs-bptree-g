@@ -836,7 +836,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
 
       // update parent member of children that are assigned new_n
-      for (uint32_t new_i = 0; new_i < new_n->key_count; new_i++)
+      for (uint32_t new_i = 0; new_i <= new_n->key_count; new_i++)
        {
          struct bptr_node *child_n =
             bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
