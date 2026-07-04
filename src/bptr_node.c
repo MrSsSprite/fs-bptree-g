@@ -884,8 +884,6 @@ static inline
 int _node_promote(struct bptr *self, struct bptr_node *par_n,
                   struct bptr_node *prm_n, const void *key)
 {
-   if (!prm_n->is_leaf) key = prm_n->keys;
-
    if (par_n->key_count == self->node_bound.brch.up - 1)
     {
 #define _node_prm_split_par(type) do \
