@@ -769,7 +769,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (size_t)BPTR_PTR_SIZE * (new_n->key_count + 1));
 
          if (_node_promote(self, parent_n, new_n,
-                           (char*)node->keys + node->key_count - 1))
+               (char*)node->keys + self->key_size * (node->key_count - 1)))
             goto PAR_SPLIT_ERR;
 
          node->key_count--;
@@ -782,8 +782,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          char *kdst = new_n->keys, *vdst = new_n->vals;
          size_t cnt, cnt_b, offset, offset_b;
 
-         if (_node_promote(self, parent_n,
-                           new_n, (char*)node->keys + node->key_count))
+         if (_node_promote(self, parent_n, new_n,
+               (char*)node->keys + self->key_size * node->key_count))
             goto PAR_SPLIT_ERR;
 
          // Before new elem
