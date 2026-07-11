@@ -683,6 +683,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
       new_n->key_count = self->node_bound.leaf.up / 2;
       // total # of elem == up because one new elem is adding in
       node->key_count = self->node_bound.leaf.up - new_n->key_count;
+      self->record_cnt++;
 
       // move elems to new node
       // because is_leaf, symmetric structure on keys & vals
@@ -851,7 +852,6 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    bptr_node_unload(self, parent_n);
    ret = new_n->node_idx;
    bptr_node_unload(self, new_n);
-   self->record_cnt++;
    self->node_cnt++;
    return ret;
 
@@ -860,6 +860,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 CHILD_N_UPDATE_ERR:  has_set_err = 1;
    // TODO: children point back to old node
 PAR_SPLIT_ERR:       has_set_err = 1;
+   if (node->is_leaf) self->record_cnt--;
    node->key_count = max_sz;
 NEXT_N_UPDATE_ERROR: has_set_err = 1;
    _node_drop(self, new_n);
