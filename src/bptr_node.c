@@ -228,9 +228,6 @@ uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
  * @return  error code
  * @retval  0     success
  * @retval  200   parent node was full and split failed
- *
- * @remark  If @p prm_n is a branch node, @p key is ignored and
- *          @c prm_n->keys[0] is used as the promoted key instead.
  */
 static inline
 int _node_promote(struct bptr *self, struct bptr_node *par_n,
