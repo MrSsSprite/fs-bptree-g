@@ -3,6 +3,7 @@
 #include "bptr_internal.h"
 #include "bptr_io.h"
 #include "bptr_node.h"
+#include "bptr_cache.h"
 #include "bptr_utils.h"
 #include <stdlib.h>
 #include <string.h>
@@ -59,20 +60,24 @@ struct bptr *bptr_init
    uint32_t node_size,
    uint16_t key_size,
    uint16_t value_size,
+   uint64_t cache_capacity,
    int (*compare)(const void *lhs, const void *rhs)
 )
 {
+   _Bool has_set_err = 0;
    struct bptr *self;
 
    /* Node must be large enough to at least contain
     * the metadata, 1 key and 2 childs */
    if (node_size < BPTR_NODE_METADATA_BYTE + key_size +
-                   (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2)
-      return NULL;
+                   (is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * 2 ||
+       cache_capacity < BPTR_CACHE_CAPACITY_MIN ||
+       key_size == 0 || value_size == 0)
+      goto INVALID_SIZE_ERR;
 
    /* malloc for the handler */
    self = malloc(sizeof (struct bptr));
-   if (self == NULL) return NULL;
+   if (self == NULL) goto BPTR_MALLOC_ERR;
 
    /* Write Metadata */
    self->version = BPTR_CURRENT_VERSION;
@@ -81,62 +86,90 @@ struct bptr *bptr_init
    self->node_size = node_size;
    self->key_size = key_size;
    self->value_size = value_size;
-   _bptr_bound_set(self);
+   _bptr_bound_set(self);  // goto INVALID_FANOUT_ERR on error
    self->record_cnt = 0;
    self->node_cnt = 0;
    self->height = 0;
    self->compare = compare;
 
+   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
+
    /* Construct the file */
-   if (bptr_io_fcreat(self, filename)) 
+   if (bptr_io_fcreat(self, filename))
       goto FOPEN_ERR;
 
    return self;
 
 /* Error Handle */
-FOPEN_ERR:
-INVALID_FANOUT_ERR:
+   // TODO: fclose Error handle
+   bptr_io_fclose(self);
+FOPEN_ERR:           _set_errno(BPTR_E_FACCESS);
+   //TODO: deinit Error handle
+   bptr_cache_deinit(self);
+CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    free(self);
+BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
+INVALID_SIZE_ERR:    _set_errno(BPTR_E_FN_INPUT);
    return NULL;
 }
 
 
-struct bptr *bptr_load(const char *filename,
+struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs))
 {
+   _Bool has_set_err = 0;
    struct bptr *self;
    int fn_ret;
 
+   if (cache_capacity < BPTR_CACHE_CAPACITY_MIN)
+      goto INVALID_INP_ERR;
+
    /* malloc for the handler */
    self = malloc(sizeof (struct bptr));
-   if (self == NULL) return NULL;
+   if (self == NULL) goto BPTR_MALLOC_ERR;
 
-   fn_ret = bptr_io_fload(self, filename);
-   if (fn_ret)
-    {
-      bptr_errno = 1;
-      goto FLOAD_ERR;
-    }
+   if (bptr_io_fload(self, filename)) goto FLOAD_ERR;
    _bptr_bound_set(self);
    self->compare = compare;
 
+   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
+
    return self;
 
-INVALID_FANOUT_ERR:
+   /*-------------------------- Error Handling Zone --------------------------*/
+   //TODO: deinit Error handle
+   bptr_cache_deinit(self);
+CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    bptr_io_fclose(self);
-FLOAD_ERR:
+FLOAD_ERR:           _set_errno(BPTR_E_FACCESS);
    free(self);
+BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
+INVALID_INP_ERR:     _set_errno(BPTR_E_FN_INPUT);
    return NULL;
 }
 
 int bptr_unload(struct bptr *self)
 {
-   int err_code = 0;
+   _Bool has_set_err = 0;
+   int fn_err;
 
-   if (bptr_io_fclose(self))
-      err_code = BPTR_E_FCLOSE;
+   fn_err = bptr_cache_deinit(self);
+   if (fn_err) goto CACHE_DEINIT_ERR;
+
+   fn_err = bptr_io_fclose(self);
+   if (fn_err) goto IO_FCLOSE_ERR;
    free(self);
 
+   return 0;
+
+   /*-------------------------- Error Handling Zone --------------------------*/
+   int err_code;
+
+CACHE_DEINIT_ERR: _set_err_code(fn_err);
+IO_FCLOSE_ERR:    _set_err_code(fn_err);
+   if (bptr_errno == BPTR_E_FCLOSE) free(self);
    return err_code;
 }
 
@@ -184,10 +217,10 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
    if (self->root_idx == 0)
     { bptr_errno = 0; return (struct node_idx_pair){ 0, NULL }; }
 
-   for (node = bptr_node_load(self, self->root_idx); ;)
+   for (node = bptr_node_fetch(self, self->root_idx); ;)
     {
       bptr_node_t node_idx;
-      // Error: bptr_node_load() sets bptr_errno on error
+      // Error: bptr_node_fetch() sets bptr_errno on error
       if (node == NULL) return (struct node_idx_pair){ 0, NULL };
 
       for (lo = 0, up = node->key_count, md = up / 2;
@@ -208,18 +241,8 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
 
       // setup for next iteration
       node_idx = _node_brch_vals_get(self, node, cmp_res == 0 ? md + 1 : up);
-      if ((err_code = bptr_node_unload(self, node)))
-       {
-         switch (err_code)
-          {
-         case 2: // Error: bptr_node_flush sets bptr_errno
-            bptr_errno &= 0x80u; // set 0x80 bit to differentiate load error
-            return (struct node_idx_pair){ 0, NULL };
-         default:
-            exit(BPTR_E_UNREACHABLE);
-          }
-       }
-      node = bptr_node_load(self, node_idx);
+      bptr_node_unload(self, node);
+      node = bptr_node_fetch(self, node_idx);
     }
 
    // either returns due to empty tree or on leaf (in for loop)

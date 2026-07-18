@@ -6,7 +6,6 @@
 /*--------------------------- Public Includes END ----------------------------*/
 
 /*------------------------------ Public Macros -------------------------------*/
-#define _FILE_OFFSET_BITS 64  /* Ensures off_t is 64-bit on Linux/Unix */
 #include <stdio.h>
 #include <stdint.h>
 
@@ -28,11 +27,23 @@
  * @return  0 on success. Otherwise, the error code is returned.
  */
 int bptr_io_fcreat(struct bptr *self, const char *filename);
+
 /**
  * @brief   load an existing B+tree from a file
- * @return  0 on success. Otherwise, the error code is returned.
+ *
+ * This function loads and fills in fundamental informations about a B+Tree
+ * stored in an existing file.
+ *
+ * @return  Error Code
+ * @retval  0  Success
+ * @retval  BPTR_E_FACCESS       Failed on opening/reading the file.
+ * @retval  BPTR_E_ITRNL_STATE   Corrupted file (invalid value detected).
+ * @retval  BPTR_E_OOM           Failed on allocating space for @c fbuf
+ *
+ * @remark  On any failure, both @c fbuf and @c file members remains invalid.
  */
 int bptr_io_fload(struct bptr *self, const char *filename);
+
 /**
  * @brief   close the file and clean up file-related resources
  *
@@ -43,11 +54,23 @@ int bptr_io_fload(struct bptr *self, const char *filename);
  * @retval  BPTR_E_FACCESS    Failed when flushing caches
  * @retval  BPTR_E_FCLOSE     Failed at fclose
  *
- * @note This function flushes caches before closing the file.
+ * @remark  @c self->fbuf is free'd if @c BPTR_E_FCLOSE is returned; otherwise,
+ *          both @c self->file and @c self->fbuf remains valid on error.
  */
 int bptr_io_fclose(struct bptr *self);
 int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx);
-bptr_node_t bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx);
+
+/**
+ * @brief   flushes @c self->fbuf to file
+ *
+ * @param   self     bptr struct
+ * @param   node_idx target offset in file
+ * @return  error code
+ * @retval  0                 success
+ * @retval  BPTR_E_FACCESS    failed on accessing file
+ * @retval  BPTR_E_FN_INPUT   @p node_idx is @c 0
+ */
+int bptr_io_flush_node(struct bptr *self, bptr_node_t node_idx);
 /*--------------------------- Public Functions END ---------------------------*/
 
 #endif

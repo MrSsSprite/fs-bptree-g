@@ -37,7 +37,8 @@ struct bptr_node
    uint16_t flags, level;
    uint32_t key_count, checksum;
    bptr_node_t parent, prev, next;
-   void *keys, *vals;
+   void *vals;
+   char keys[];
 };
 /*---------------------------- Public Structs END ----------------------------*/
 
@@ -45,10 +46,10 @@ struct bptr_node
 /*----------------------------- Public Functions -----------------------------*/
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent);
-void bptr_node_free(struct bptr_node *node);
  
 int bptr_node_erase(bptr_node_t node_idx);
-struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx);
+int bptr_node_load
+ (struct bptr *self, bptr_node_t node_idx, struct bptr_node *node);
 /**
  * @brief   unload a bptr node
  *
@@ -57,23 +58,24 @@ struct bptr_node *bptr_node_load(struct bptr *self, bptr_node_t node_idx);
  *
  * @param   self  bptr obj.
  * @param   node  the node to be unloaded
- * @retval  0  success
- * @retval  2  bptr_node_flush failure. bptr_node_flush sets bptr_errno
  *
  * @note    The node may still be cached depending on the implementation.
  * @note    The library is responsible for flushing, when necessary. Thus,
  *          user is not (though allowed) responsible to flush the node.
  */
-int bptr_node_unload(struct bptr *self, struct bptr_node *node);
+void bptr_node_unload(struct bptr *self, struct bptr_node *node);
 /**
  * @brief   flush a bptr node to file.
  * @param   self  bptr obj.
  * @param   node  the node to be flushed
  * @return  same as if bptr_io_flush_node is called (bptr_io_flush_node sets
  *          @c bptr_errno on failure).
+ * @return  0           Success
+ * @return  BPTR_E_...  Corresponding type of failure
  * @see     bptr_io_flush_node
  */
-bptr_node_t bptr_node_flush(struct bptr *self, struct bptr_node *node);
+int bptr_node_flush(struct bptr *self, struct bptr_node *node);
+struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
 /*--------------------------- Public Functions END ---------------------------*/
 
 
