@@ -4,9 +4,11 @@
 #include "bptr_internal.h"
 #include "bptr_node.h"
 #include "bptr_utils.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 /*--------------------------- Private Includes END ---------------------------*/
 
 
@@ -85,7 +87,7 @@ int bptr_io_fcreat(struct bptr *self, const char *filename)
    char *memit;
 
    /* Create file */
-   self->file = fopen(filename, "wbx+");
+   self->file = fopen(filename, "w+bx");
    if (self->file == NULL)
       goto FOPEN_ERR;
    /* malloc for file buffer */
@@ -209,12 +211,16 @@ int bptr_io_fread_node(struct bptr *self, bptr_node_t node_idx)
 {
    bptr_off_t offset = node_idx * self->node_size;
 
-   
+
    if (fseek64(self->file, offset, SEEK_SET))
-      return 2;
+      return BPTR_E_FSEEK;
 
    if (fread(self->fbuf, self->node_size, 1, self->file) != 1)
-      return 3;
+    {
+      if (feof(self->file)) return BPTR_E_ITRNL_STATE;
+      else if (ferror(self->file)) return BPTR_E_FACCESS;
+      else return BPTR_E_UNREACHABLE;
+    }
 
    return 0;
 }

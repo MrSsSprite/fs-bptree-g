@@ -191,6 +191,59 @@ void _node_key_erase(struct bptr *self, struct bptr_node *node,
 static inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx);
+/**
+ * @brief   Search for a key within a node's key array
+ *
+ * Performs a binary search to locate the first key in @p node that is not less
+ * than @p key . This index serves as the exact match or the potential insertion
+ * point.
+ *
+ * @param[in]  self  B+Tree instance.
+ * @param[in]  node  node to be searched.
+ * @param[in]  key   target key to locate.
+ *
+ * @return  The index of the lower bound of @p key
+ * @retval  index    If the key is found, this is the index of the match.
+ * @retval  index    If not found, this is the insertion point (the index of the
+ *                   smallest key greater than @p key , or @c node->key_count if
+ *                   @p key is the largest).
+ * @remark  If an exact match is not found, @c bptr_errno is set to @c -1 .
+ *          Otherwise, @c bptr_errno is set to @c 0 .
+ */
+static inline
+uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
+                          const void *key);
+/**
+ * @brief   Promote a key-node(reference) pair into a parent node
+ *
+ * Inserts the promoted key and child pointer of @p prm_n into @p par_n .
+ * If @p par_n is already full, a recursive split is triggered via
+ * @c bptr_node_split .
+ *
+ * @param[in]     self  @c bptr object.
+ * @param[in,out] par_n parent node to receive the promoted key and child.
+ * @param[in]     prm_n node being promoted into @p par_n .
+ * @param[in]     key   key to promote.
+ *
+ * @return  error code
+ * @retval  0     success
+ * @retval  200   parent node was full and split failed
+ */
+static inline
+int _node_promote(struct bptr *self, struct bptr_node *par_n,
+                  struct bptr_node *prm_n, const void *key);
+
+
+/**
+ * @brief   Free a node and Drop all changes
+ *
+ * @param[in,out] self  bptr obj.
+ * @param[in]     node  target node to be droped.
+ *
+ * @return  error code
+ */
+static inline
+int _node_drop(struct bptr *self, struct bptr_node *node);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -199,6 +252,7 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
 // caller is responsible to write that
 // if parent == 0, self->height is incremented
 // checksum is also uninitialized
+// self->node_cnt is NOT updated
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent)
 {
@@ -246,13 +300,13 @@ struct bptr_node *bptr_node_new
    int err_code;
 
 PARENT_LOAD_ERR:  _set_err_code(bptr_errno);
-   bptr_cache_reclaim(self, node);
+bptr_cache_reclaim(self, node);
 CACHE_ALLOC_ERR:  _set_err_code(bptr_errno);
-   if (bptr_node_vacate(self, file_slot))
-      perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
+                  if (bptr_node_vacate(self, file_slot))
+                     perror("`bptr_node_new' error zone: `bptr_node_vacate': flush failure");
 PREALLOC_ERR:  _set_err_code(bptr_errno);
 
-   bptr_errno = err_code;
+               bptr_errno = err_code;
    return NULL;
 }
 
@@ -522,5 +576,344 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
    memmove(node->vals + idx * val_size,
            node->vals + idx_plus1 * val_size,
            (val_cnt - idx_plus1) * val_size);
+}
+
+
+static inline
+uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
+                               const void *key)
+{
+   uint_fast32_t lo, md, hi;
+   // Edge Case: empty (i.e., key_count == 0)
+   int cmp_res = -1;
+
+   for (lo = 0, hi = node->key_count, md = hi / 2;
+        lo != hi; md = lo + (hi - lo) / 2)
+    {
+      cmp_res = self->compare(key, node->keys + md * self->key_size);
+      if (cmp_res < 0)
+         hi = md;
+      else if (cmp_res > 0)
+         lo = md + 1;
+      else
+         break;
+    }
+
+   if (cmp_res == 0) bptr_errno = 0;
+   else              bptr_errno = -1;
+   return md;
+}
+
+
+BPTR_STATIC
+bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
+                            const void *key, const void *val)
+{
+   _Bool has_set_err = 0;
+   // TODO: replace error codes magic # with manifest constant
+   struct bptr_node *new_n, *parent_n, *next_n;
+   _Bool has_new_parent;
+   uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
+                                           self->node_bound.brch.up) - 1,
+                 new_elem_idx;
+   bptr_node_t ret;
+
+   // Check full; error if not already full
+   if (node->key_count != max_sz) goto PRE_WORK_ERR;
+
+   /*{--------------- Pre-Work: Find low bound of new element ----------------*/
+   new_elem_idx = _node_key_search(self, node, key);
+   // newly inserted element should not match with another existing element
+   if (bptr_errno == 0) goto PRE_WORK_ERR;
+   /*}--------------- Pre-Work: Find low bound of new element ----------------*/
+
+   /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
+   if (node->parent == 0)
+    {
+      parent_n = bptr_node_new(self, 0);
+      if (parent_n == NULL) goto PAR_N_LOAD_ERR;
+
+      has_new_parent = 1;
+      // node was root as it has no parent
+      parent_n->prev = parent_n->next = 0;
+      // add orig. node into parent_n->vals in advance
+      _node_child_insert(self, parent_n, node->node_idx, 0);
+      node->parent = parent_n->node_idx;
+      self->root_idx = parent_n->node_idx;
+      self->node_cnt++;
+    }
+   else
+    {
+      has_new_parent = 0;
+      parent_n = bptr_node_fetch(self, node->parent);
+      if (parent_n == NULL) goto PAR_N_LOAD_ERR;
+    }
+   /*}--------------------- Pre-Work: Load Parent Node -----------------------*/
+
+   /*{-------------------- Pre-work: Init new empty node ---------------------*/
+   new_n = bptr_node_new(self, node->parent);
+   if (new_n == NULL) goto NEW_N_MALLOC_ERR;
+   /*}-------------------- Pre-work: Init new empty node ---------------------*/
+
+   /*{--------------------- Pre-Work: Update prev, next ----------------------*/
+   // update new_n->next->prev
+   if (node->next)
+    {
+      next_n = bptr_node_fetch(self, node->next);
+      if (next_n == NULL) goto NEXT_N_UPDATE_ERROR;
+      next_n->prev = new_n->node_idx;
+      next_n->is_dirty = 1;
+      bptr_node_unload(self, next_n);
+    }
+
+   new_n->next = node->next;
+   new_n->is_dirty = 1;
+   new_n->prev = node->node_idx;
+   node->next = new_n->node_idx;
+   node->is_dirty = 1;
+   /*}--------------------- Pre-Work: Update prev, next ----------------------*/
+
+   /*{------------------------ Main-Work: Split node -------------------------*/
+   if (node->is_leaf)
+    {
+      // new node gets up_bound / 2 keys; orig node retains other
+      new_n->key_count = self->node_bound.leaf.up / 2;
+      // total # of elem == up because one new elem is adding in
+      node->key_count = self->node_bound.leaf.up - new_n->key_count;
+      self->record_cnt++;
+
+      // move elems to new node
+      // because is_leaf, symmetric structure on keys & vals
+      if (new_elem_idx < node->key_count)
+       {
+         // src_st = orig_n->key_cnt - 1
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * (node->key_count - 1),
+                (size_t)self->key_size * new_n->key_count);
+         memcpy(new_n->vals,
+                (char*)node->vals + self->value_size * (node->key_count - 1),
+                (size_t)self->value_size * new_n->key_count);
+
+         node->key_count--;
+         _node_key_insert(self, node, key, new_elem_idx);
+         _node_val_insert(self, node, val, new_elem_idx);
+         node->key_count++;
+       }
+      else  // new elem in right part
+       {
+         uint_fast32_t cnt = new_elem_idx - node->key_count;
+         // before new elem
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * node->key_count,
+                (size_t)self->key_size * cnt);
+         memcpy(new_n->vals,
+                (char*)node->vals + self->value_size * node->key_count,
+                (size_t)self->value_size * cnt);
+         // new elem
+         memcpy((char*)new_n->keys + self->key_size * cnt,
+                key, self->key_size);
+         memcpy((char*)new_n->vals + self->value_size * cnt,
+                val, self->value_size);
+         cnt++;
+         // after new elem
+         memcpy((char*)new_n->keys + self->key_size * cnt,
+                (char*)node->keys + self->key_size * new_elem_idx,
+                (size_t)self->key_size * (max_sz - new_elem_idx));
+         memcpy((char*)new_n->vals + self->value_size * cnt,
+                (char*)node->vals + self->value_size * new_elem_idx,
+                (size_t)self->value_size * (max_sz - new_elem_idx));
+       }
+
+      // Update parent
+      if (parent_n->key_count == self->node_bound.brch.up - 1)
+       { // Split parent if it's already full
+         if (self->is_lite)
+          {
+            BPTR_LITE_PTR_TYPE n_idx = new_n->node_idx;
+            if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
+               goto PAR_SPLIT_ERR;
+          }
+         else
+          {
+            BPTR_NORM_PTR_TYPE n_idx = new_n->node_idx;
+            if (bptr_node_split(self, parent_n, new_n->keys, &n_idx) == 0)
+               goto PAR_SPLIT_ERR;
+          }
+       }
+      else
+       {
+         uint32_t idx = _node_key_search(self, parent_n, new_n->keys);
+         _node_key_insert(self, parent_n, new_n->keys, idx);
+         _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
+         parent_n->key_count++;
+       }
+    }
+   else  // internal node
+    {
+      node->key_count = self->node_bound.brch.up / 2;
+      new_n->key_count = self->node_bound.brch.up - node->key_count - 1;
+
+      if (new_elem_idx < node->key_count)
+       {
+         memcpy(new_n->keys,
+                (char*)node->keys + self->key_size * node->key_count,
+                (size_t)self->key_size * new_n->key_count);
+         // cp (up - new_val_cnt), nvc
+         // nvc = new_key_cnt + 1 = (up - old_key_cnt - 1) + 1 = up - okc
+         // => okc = up - nvc
+         // cp okc, nvc
+         memcpy(new_n->vals,
+                (char*)node->vals + BPTR_PTR_SIZE * node->key_count,
+                (size_t)BPTR_PTR_SIZE * (new_n->key_count + 1));
+
+         if (_node_promote(self, parent_n, new_n,
+               (char*)node->keys + self->key_size * (node->key_count - 1)))
+            goto PAR_SPLIT_ERR;
+
+         node->key_count--;
+         _node_key_insert(self, node, key, new_elem_idx);
+         _node_val_insert(self, node, val, new_elem_idx + 1);
+         node->key_count++;
+       }
+      else if (new_elem_idx > node->key_count)
+       {
+         char *kdst = new_n->keys, *vdst = new_n->vals;
+         size_t cnt, cnt_b, offset, offset_b;
+
+         if (_node_promote(self, parent_n, new_n,
+               (char*)node->keys + self->key_size * node->key_count))
+            goto PAR_SPLIT_ERR;
+
+         // Before new elem
+         offset = node->key_count + 1;
+         cnt = new_elem_idx - offset;
+         offset_b = offset * self->key_size;
+         cnt_b = cnt * self->key_size;
+         memcpy(kdst, (char*)node->keys + offset_b, cnt_b);
+         kdst += cnt_b;
+         // offset unchanged as keys has prm as buffer
+         offset_b = offset * BPTR_PTR_SIZE;
+         // cnt_val = (nei + 1) - (okc + 1) = cnt_key + 1
+         cnt_b = ++cnt * BPTR_PTR_SIZE;
+         memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
+         vdst += cnt_b;
+
+         // New elem
+         memcpy(kdst, key, self->key_size);
+         kdst += self->key_size;
+         memcpy(vdst, val, BPTR_PTR_SIZE);
+         vdst += BPTR_PTR_SIZE;
+
+         // After new elem
+         offset = new_elem_idx;
+         cnt = max_sz - offset;
+         offset_b = offset * self->key_size;
+         cnt_b = cnt * self->key_size;
+         memcpy(kdst, (char*)node->keys + offset_b, cnt_b);
+         // nei_v = nei_k + 1
+         offset = new_elem_idx + 1;
+         // cnt_v = mx_v - offset = (mx_k + 1) - (nei_k + 1) = mx - nei
+         cnt = max_sz - new_elem_idx;
+         offset_b = offset * BPTR_PTR_SIZE;
+         cnt_b = cnt * BPTR_PTR_SIZE;
+         memcpy(vdst, (char*)node->vals + offset_b, cnt_b);
+       }
+      else
+       { // new_elem_idx == okc
+         if (_node_promote(self, parent_n, new_n, key)) goto PAR_SPLIT_ERR;
+
+         memcpy(new_n->keys,
+                (char*)node->keys + new_elem_idx * self->key_size,
+                (size_t)self->key_size * new_n->key_count);
+
+         memcpy(new_n->vals, val, BPTR_PTR_SIZE);
+         // nei_v = nei_k + 1
+         memcpy((char*)new_n->vals + BPTR_PTR_SIZE,
+                (char*)node->vals + (new_elem_idx + 1) * BPTR_PTR_SIZE,
+                (size_t)BPTR_PTR_SIZE * new_n->key_count);
+       }
+
+      // update parent member of children that are assigned new_n
+      for (uint32_t new_i = 0; new_i <= new_n->key_count; new_i++)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
+         if (child_n == NULL) goto CHILD_N_UPDATE_ERR;
+         child_n->parent = new_n->node_idx;
+         child_n->is_dirty = 1;
+         bptr_node_unload(self, child_n);
+       }
+    }
+   /*}------------------------ Main-Work: Split node -------------------------*/
+
+   bptr_node_unload(self, parent_n);
+   ret = new_n->node_idx;
+   bptr_node_unload(self, new_n);
+   self->node_cnt++;
+   return ret;
+
+/*--------------------------- Error Handling Zone ----------------------------*/
+// restore back to the state before fn call on error
+CHILD_N_UPDATE_ERR:  has_set_err = 1;
+   // TODO: children point back to old node
+PAR_SPLIT_ERR:       has_set_err = 1;
+   if (node->is_leaf) self->record_cnt--;
+   node->key_count = max_sz;
+NEXT_N_UPDATE_ERROR: has_set_err = 1;
+   _node_drop(self, new_n);
+NEW_N_MALLOC_ERR:    has_set_err = 1;
+   if (has_new_parent)
+    {
+      _node_drop(self, parent_n);
+      self->height--;
+      self->node_cnt--;
+      node->parent = 0;
+      self->root_idx = node->node_idx;
+    }
+   else
+      bptr_node_unload(self, parent_n);
+PAR_N_LOAD_ERR:   has_set_err = 1;
+PRE_WORK_ERR:     _set_errno(BPTR_E_FN_INPUT);
+   return 0;
+}
+
+
+static inline
+int _node_promote(struct bptr *self, struct bptr_node *par_n,
+                  struct bptr_node *prm_n, const void *key)
+{
+   if (par_n->key_count == self->node_bound.brch.up - 1)
+    {
+#define _node_prm_split_par(type) do \
+{ \
+   type n_idx = prm_n->node_idx; \
+   if (bptr_node_split(self, par_n, key, &n_idx) == 0) return bptr_errno; \
+} while (0)
+
+      if (self->is_lite)
+         _node_prm_split_par(BPTR_LITE_PTR_TYPE);
+      else
+         _node_prm_split_par(BPTR_NORM_PTR_TYPE);
+
+#undef _node_prm_split_par
+    }
+   else
+    {
+      // find insertion point
+      uint32_t idx = _node_key_search(self, par_n, key);
+      _node_key_insert(self, par_n, key, idx);
+      _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
+      par_n->key_count++;
+    }
+   return 0;
+}
+
+
+static inline
+int _node_drop(struct bptr *self, struct bptr_node *node)
+{
+   int err_code = bptr_node_vacate(self, node->node_idx);
+   bptr_cache_reclaim(self, node);
+   return err_code;
 }
 /*-------------------------- Private Functions END ---------------------------*/
