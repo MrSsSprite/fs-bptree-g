@@ -238,7 +238,7 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
  * @brief   Free a node and Drop all changes
  *
  * @param[in,out] self  bptr obj.
- * @param[in]     node  target node to be droped.
+ * @param[in.out] node  target node to be droped.
  *
  * @return  error code
  */
