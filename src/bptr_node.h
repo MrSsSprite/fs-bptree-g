@@ -76,6 +76,47 @@ void bptr_node_unload(struct bptr *self, struct bptr_node *node);
  */
 int bptr_node_flush(struct bptr *self, struct bptr_node *node);
 struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
+/**
+ * @brief   Insert a key–value pair into a leaf node at a given index
+ *
+ * Inserts @p key and @p value into @p node at position @p idx , shifting
+ * existing entries rightward to make room.  If @p node is already at maximum
+ * capacity (@c node->key_count equals @c leaf.up - 1 ), the insertion is
+ * delegated to @c bptr_node_split , which splits the node and may cascade
+ * upward.
+ *
+ * @param[in,out] self  bptr object.  @c record_cnt is incremented on success.
+ * @param[in,out] node  target leaf node.  Its @c keys , @c vals , and
+ *                      @c key_count are modified.  If the node is full, a
+ *                      split may also update @c node->parent , @c node->next ,
+ *                      and global tree state (@c root_idx , @c height ,
+ *                      @c node_cnt ).
+ * @param[in]     idx   insertion index (0-based), typically obtained from
+ *                      @c _node_key_search .  Must be in the range
+ *                      @c [0, node->key_count] .
+ * @param[in]     key   pointer to the key to copy into @c node->keys .
+ * @param[in]     value pointer to the value to copy into @c node->vals .
+ *
+ * @return  error code
+ * @retval  0           success; the key–value pair was inserted (possibly
+ *                      via a split).
+ * @retval  non-zero    failure; @c bptr_errno is set.  This only occurs when
+ *                      the node was full and @c bptr_node_split failed.  In
+ *                      that case @p node is left unmodified ( @c key_count
+ *                      is restored by the split's rollback).
+ *
+ * @warning  This function is designed for leaf nodes.  Calling it on an
+ *           internal (branch) node with a full key count causes the split
+ *           path to misbehave because the capacity check compares against
+ *           @c leaf.up rather than @c brch.up .
+ * @warning  It is the caller's responsibility to ensure @p idx is valid
+ *           (0 ≤ @p idx ≤ @c node->key_count ) and that @p key does not
+ *           already exist in @p node .  Neither condition is checked
+ *           here — violating them results in undefined behaviour.
+ */
+int bptr_node_insert
+ (struct bptr *self, struct bptr_node *node, bptr_node_ki_t idx,
+  const void *key, const void *value);
 /*--------------------------- Public Functions END ---------------------------*/
 
 

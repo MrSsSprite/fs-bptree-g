@@ -426,6 +426,27 @@ int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 FLUSH_ERR:  _set_err_code(fn_err);
    return err_code;
 }
+
+
+int bptr_node_insert
+ (struct bptr *self, struct bptr_node *node, bptr_node_ki_t idx,
+  const void *key, const void *value)
+{
+   // node full
+   if (++node->key_count == self->node_bound.leaf.up)
+    {
+      node->key_count--;
+      if (bptr_node_split(self, node, key, value) == 0)
+         return bptr_errno;   // split should set bptr_errno
+      return 0;
+    }
+
+   _node_key_insert(self, node, key, idx);
+   _node_val_insert(self, node, value, idx);
+   node->key_count++;
+   self->record_cnt++;
+   return 0;
+}
 /*--------------------------- Public Functions END ---------------------------*/
 
 
