@@ -238,12 +238,79 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
  * @brief   Free a node and Drop all changes
  *
  * @param[in,out] self  bptr obj.
- * @param[in]     node  target node to be droped.
+ * @param[in.out] node  target node to be droped.
  *
  * @return  error code
  */
 static inline
 int _node_drop(struct bptr *self, struct bptr_node *node);
+
+
+/**
+ * @brief   Split a full B+tree node around a new key–value pair
+ *
+ * Splits @p node (which must be at maximum capacity) into two nodes by
+ * distributing its existing keys and values along with the incoming
+ * @p key / @p val .  A new sibling node is allocated, the leaf-level
+ * doubly-linked list is stitched to place it immediately after the original
+ * node, and the separator key together with the new child pointer are
+ * inserted into the parent.  If the parent is already full the split
+ * cascades upward via a recursive call.
+ *
+ * When @p node has no parent (i.e., it is the root) a fresh parent is
+ * created and @c self->height is incremented; the original node becomes
+ * the leftmost child.
+ *
+ * **Leaf-split specifics.**
+ * The new node receives @c leaf.up / 2 keys (the higher half), while the
+ * original node keeps the lower half.  After the data are moved, the first
+ * key of the new node is used as the separator and is promoted into the
+ * parent together with the new node's pointer.  @c self->record_cnt is
+ * incremented to account for the newly inserted record.
+ *
+ * **Internal-node specifics.**
+ * One key is promoted to the parent via @c _node_promote ; the keys and
+ * child pointers are then distributed so that the original node keeps the
+ * keys strictly left of the promotion point and the new node receives the
+ * keys strictly right of it.  After distribution every child pointer owned
+ * by the new node has its @c parent field rewritten to point to the new
+ * node.
+ *
+ * @param[in,out] self  bptr object.  @c node_cnt is incremented for the
+ *                      new sibling (and for a new parent, if one is
+ *                      created).  For leaf splits @c record_cnt is also
+ *                      incremented.  @c height and @c root_idx may be
+ *                      updated when splitting the root.
+ * @param[in,out] node  the full node to split.  Its @c key_count , keys,
+ *                      vals, @c next , and (if it was the root) @c parent
+ *                      are modified.
+ * @param[in]     key   new key to insert during the split.
+ * @param[in]     val   new value to insert during the split.  For internal
+ *                      nodes this is a child pointer.
+ *
+ * @return  node index of the newly created sibling.
+ * @retval  >0   success; the returned value is the index of the new
+ *               sibling node.
+ * @retval  0    failure; @c bptr_errno is set and all side effects are
+ *               rolled back — the new sibling (and any freshly created
+ *               parent) are dropped, @c key_count is restored, and
+ *               @c record_cnt / @c height / @c root_idx are reverted
+ *               where applicable.
+ *
+ * @pre  @p node must be at maximum capacity (@c node->key_count equals
+ *       the applicable @c node_bound up bound minus one).  Calling this
+ *       function on a non-full node sets @c bptr_errno to
+ *       @c BPTR_E_FN_INPUT and returns 0.
+ * @pre  @p key must not already exist in @p node ; a duplicate key causes
+ *       the same early-exit behaviour.
+ *
+ * @note  The forward declaration carries @c BPTR_STATIC because
+ *        @c _node_promote (defined earlier) may call this function
+ *        recursively, creating a mutual recursion between the two.
+ */
+BPTR_STATIC
+bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
+                            const void *key, const void *val);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
