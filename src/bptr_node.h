@@ -162,6 +162,31 @@ uint32_t bptr_node_key_search(struct bptr *self, struct bptr_node *node,
 int bptr_node_insert
  (struct bptr *self, struct bptr_node *node, bptr_node_ki_t idx,
   const void *key, const void *value);
+/**
+ * @brief   Drop the root node and reset the tree to an empty state
+ *
+ * Frees the file space occupied by @p node (which must be the current root)
+ * via @c _node_drop and resets all tree-level counters (@c root_idx ,
+ * @c height , @c record_cnt , @c node_cnt ) to zero, leaving the tree in
+ * its pristine, just-created state.
+ *
+ * @param[in,out] self  bptr object.  @c root_idx , @c height ,
+ *                      @c record_cnt , and @c node_cnt are zeroed.
+ * @param[in,out] node  root node to drop.  Its file space is vacated and
+ *                      its cache entry is reclaimed.
+ *
+ * @return  error code
+ * @retval  0     success; the tree is now empty.
+ * @retval  !=0   failure from @c _node_drop ( @c bptr_errno is set by
+ *                @c bptr_node_vacate ).  Tree state is NOT modified on
+ *                failure — @c self 's counters remain unchanged.
+ *
+ * @warning  Use ONLY when @p node is the sole node in the tree (i.e., the
+ *           root with no children).  Calling this on a root that still has
+ *           children leaks those child nodes and leaves the tree in an
+ *           inconsistent state.
+ */
+int bptr_node_root_drop(struct bptr *self, struct bptr_node *node);
 /*--------------------------- Public Functions END ---------------------------*/
 
 
