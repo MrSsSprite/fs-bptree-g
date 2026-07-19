@@ -177,24 +177,42 @@ IO_FCLOSE_ERR:    _set_err_code(fn_err);
 // Replaces the value if the key already exists in the tree
 int bptr_insert(struct bptr *self, const void *key, const void *value)
 {
+   _Bool has_set_err = 0;
+   int err_code;
    struct node_idx_pair find_res;
+   _Bool has_new_node;
 
-   //TODO: temporary implementation; cache pool should be involved later
 
-   find_res = bptr_find_node(self, key);
-   if (bptr_errno)
-      return bptr_errno < 0 ? -1 : 1;
-   // Empty Tree
-   if (find_res.node == NULL)
+   if (self->root_idx == 0)   // Empty Tree
     {
       find_res.node = bptr_node_new(self, 0);
-      if (find_res.node == NULL) return 1;
+      if (find_res.node == NULL) return bptr_errno;
       find_res.node->prev = find_res.node->next = 0;
       find_res.idx = 0;
+      self->node_cnt++;
+      has_new_node = 1;
+    }
+   else
+    {
+      has_new_node = 0;
+      find_res = bptr_find_node(self, key);
+      if (bptr_errno) goto FIND_NODE_ERR;
+      if (find_res.is_found) goto KEY_EXIST_ERR;
     }
 
-   //TODO
-   exit(BPTR_E_TODO);
+   err_code = bptr_node_insert(self, find_res.node, find_res.idx, key, value);
+   if (err_code) goto NODE_INSERT_ERR;
+
+   return 0;
+
+   /*-------------------------- Error Handling Zone --------------------------*/
+NODE_INSERT_ERR: has_set_err = 1;
+KEY_EXIST_ERR:   _set_err_code(BPTR_E_KEY_EXIST);
+   if (has_new_node) bptr_node_root_drop(self, find_res.node);
+   else              bptr_node_unload(self, find_res.node);
+FIND_NODE_ERR:   _set_err_code(bptr_errno);
+NODE_NEW_ERR:    _set_err_code(bptr_errno);
+   return err_code;
 }
 /*---------------------- Public Function Definition END ----------------------*/
 
