@@ -447,6 +447,16 @@ int bptr_node_insert
    self->record_cnt++;
    return 0;
 }
+
+
+int bptr_node_root_drop(struct bptr *self, struct bptr_node *node)
+{
+   int err_code = _node_drop(self, node);
+   if (err_code) return err_code;
+   self->root_idx = 0;
+   self->height = self->record_cnt = self->node_cnt = 0;
+   return 0;
+}
 /*--------------------------- Public Functions END ---------------------------*/
 
 
