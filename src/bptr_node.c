@@ -244,6 +244,9 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
  */
 static inline
 int _node_drop(struct bptr *self, struct bptr_node *node);
+BPTR_STATIC
+bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
+                            const void *key, const void *val);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
