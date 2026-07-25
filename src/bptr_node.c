@@ -290,7 +290,8 @@ int _node_drop(struct bptr *self, struct bptr_node *node);
  *
  * @return  node index of the newly created sibling.
  * @retval  >0   success; the returned value is the index of the new
- *               sibling node.
+ *               sibling node. @c bptr_errno holds garbage value and should
+ *               accordingly be ignored.
  * @retval  0    failure; @c bptr_errno is set and all side effects are
  *               rolled back — the new sibling (and any freshly created
  *               parent) are dropped, @c key_count is restored, and
