@@ -21,7 +21,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 - **Description:** The empty-tree branch creates a root node via `bptr_node_new(self, 0)` but never assigns `self->root_idx = find_res.node->node_idx`. The sentinel stays 0 ("empty").
 - **Impact:** Every subsequent `bptr_insert` or `bptr_find_node` sees `root_idx == 0` and treats the tree as empty. A second insert creates a second orphan root — the first is permanently leaked. The tree is broken after one insert.
 
-### 2. Double increment of `node->key_count` in `bptr_node_insert` non-split path
+### ✅ 2. Double increment of `node->key_count` in `bptr_node_insert` non-split path
 - **File & Line:** `src/bptr_node.c:436` and `:446`
 - **Description:** `++node->key_count` at line 436 pre-increments as a tentative fullness check. On the non-full path, this increment is never undone, and line 446 increments a second time. Net: +2 per insert instead of +1.
 - **Impact:** `key_count` diverges from reality (2N instead of N). `_node_key_insert` and `_node_val_insert` use inflated `key_count` for memmove sizing, shifting garbage from beyond valid arrays. Marshal writes garbage to disk. Buffer overrun when `key_count` exceeds allocation.
