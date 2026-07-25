@@ -422,6 +422,7 @@ int bptr_node_insert
    _node_key_insert(self, node, key, idx);
    _node_val_insert(self, node, value, idx);
    // key_count was incremented above
+   node->is_dirty = 1;
    self->record_cnt++;
    return 0;
 }
@@ -796,6 +797,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          _node_key_insert(self, parent_n, new_n->keys, idx);
          _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
          parent_n->key_count++;
+         parent_n->is_dirty = 1;
        }
     }
    else  // internal node
@@ -954,6 +956,7 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
       _node_key_insert(self, par_n, key, idx);
       _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
       par_n->key_count++;
+      par_n->is_dirty = 1;
     }
    return 0;
 }
