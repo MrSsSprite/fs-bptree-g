@@ -36,7 +36,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 - **Description:** `bptr_node_split` calls `_node_key_search` which sets `bptr_errno = -1` (not-found, expected). The split succeeds but `bptr_errno` is never reset to 0. `bptr_node_insert` returns 0 (success). `bptr_insert` returns 0 (success). But `bptr_errno` reads `-1` (`BPTR_E_FN_INPUT`).
 - **Impact:** Caller sees success (return 0) but global `bptr_errno` indicates an error. Any code path checking `bptr_errno` after a successful split-insert gets a false error. Violates the API contract that `bptr_errno` is meaningful.
 
-### 5. Cache reference leak on every successful insert
+### ✅ 5. Cache reference leak on every successful insert
 - **File & Line:** `src/bptr_core.c:206`
 - **Description:** On success, `bptr_insert` returns without calling `bptr_node_unload` on `find_res.node`. The node's cache refcnt stays incremented (from `bptr_node_fetch` or `bptr_node_new`). Every successful insert adds +1 to the refcnt of the target leaf.
 - **Impact:** Cache slots are never fully released. The cache pool fills with "pinned" nodes. Eviction is disabled for these nodes. Eventually the cache pool is exhausted and `bptr_cache_alloc` fails with `BPTR_E_CACHE_FULL`. This is a deterministic leak — every insert permanently pins a cache slot.
