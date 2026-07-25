@@ -45,17 +45,17 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 
 ## High-Severity Bugs
 
-### 6. `node->is_dirty` not set after non-split insertion — data silently discarded
+### ✅ 6. `node->is_dirty` not set after non-split insertion — data silently discarded
 - **File & Line:** `src/bptr_node.c:444–448`
 - **Description:** The non-split path of `bptr_node_insert` modifies `node->keys`, `node->vals`, and `node->key_count` but never sets `node->is_dirty = 1`. Cache eviction checks `is_dirty` and skips flushing when it's 0.
 - **Impact:** **Silent data loss.** Records inserted into an existing node loaded from disk are never persisted. The first insert survives (new nodes have `is_dirty = 1` from `bptr_node_new`), but every subsequent insert into that node is lost on eviction.
 
-### 7. `parent_n->is_dirty` not set in leaf-split parent update
+### ✅ 7. `parent_n->is_dirty` not set in leaf-split parent update
 - **File & Line:** `src/bptr_node.c:846`
 - **Description:** When a leaf splits and the parent has room, the separator key and child pointer are inserted into `parent_n` (lines 843–846), but `parent_n->is_dirty` is never set.
 - **Impact:** The parent's modification (new separator + child pointer) is silently lost on eviction. The split child becomes unreachable from the parent, corrupting the tree structure.
 
-### 8. `par_n->is_dirty` not set in `_node_promote` non-split path
+### ✅ 8. `par_n->is_dirty` not set in `_node_promote` non-split path
 - **File & Line:** `src/bptr_node.c:1004`
 - **Description:** Same class of bug as #7, but in `_node_promote` (called during internal-node splits). When the parent is not full, the promoted key and child pointer are inserted but `is_dirty` is not set.
 - **Impact:** Promoted separator keys and child pointers silently lost on eviction. The internal-node split effectively never happened from disk's perspective.
