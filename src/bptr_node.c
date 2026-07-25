@@ -443,7 +443,7 @@ int bptr_node_insert
 
    _node_key_insert(self, node, key, idx);
    _node_val_insert(self, node, value, idx);
-   node->key_count++;
+   // key_count was incremented above
    self->record_cnt++;
    return 0;
 }
