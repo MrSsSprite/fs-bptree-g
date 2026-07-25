@@ -189,6 +189,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
       if (find_res.node == NULL) return bptr_errno;
       find_res.node->prev = find_res.node->next = 0;
       find_res.idx = 0;
+      self->root_idx = find_res.node->node_idx;
       self->node_cnt++;
       has_new_node = 1;
     }
@@ -208,7 +209,8 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
    /*-------------------------- Error Handling Zone --------------------------*/
 NODE_INSERT_ERR: has_set_err = 1;
 KEY_EXIST_ERR:   _set_err_code(BPTR_E_KEY_EXIST);
-   if (has_new_node) bptr_node_root_drop(self, find_res.node);
+   if (has_new_node)
+    { bptr_node_root_drop(self, find_res.node); self->root_idx = 0; }
    else              bptr_node_unload(self, find_res.node);
 FIND_NODE_ERR:   _set_err_code(bptr_errno);
 NODE_NEW_ERR:    _set_err_code(bptr_errno);

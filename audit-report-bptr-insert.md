@@ -16,7 +16,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 
 ## Critical Bugs
 
-### 1. `self->root_idx` never set when inserting into empty tree
+### ✅ 1. `self->root_idx` never set when inserting into empty tree
 - **File & Line:** `src/bptr_core.c:192`
 - **Description:** The empty-tree branch creates a root node via `bptr_node_new(self, 0)` but never assigns `self->root_idx = find_res.node->node_idx`. The sentinel stays 0 ("empty").
 - **Impact:** Every subsequent `bptr_insert` or `bptr_find_node` sees `root_idx == 0` and treats the tree as empty. A second insert creates a second orphan root — the first is permanently leaked. The tree is broken after one insert.
