@@ -26,7 +26,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 - **Description:** `++node->key_count` at line 436 pre-increments as a tentative fullness check. On the non-full path, this increment is never undone, and line 446 increments a second time. Net: +2 per insert instead of +1.
 - **Impact:** `key_count` diverges from reality (2N instead of N). `_node_key_insert` and `_node_val_insert` use inflated `key_count` for memmove sizing, shifting garbage from beyond valid arrays. Marshal writes garbage to disk. Buffer overrun when `key_count` exceeds allocation.
 
-### 3. `_node_key_search` returns `md` instead of `lo` for not-found keys
+### ~~3. `_node_key_search` returns `md` instead of `lo` for not-found keys~~
 - **File & Line:** `src/bptr_node.c:702`
 - **Description:** Binary search returns `md` (last midpoint) unconditionally. When the final comparison was `key > K[md]`, `md` is one less than the correct insertion index `lo`.
 - **Impact:** Wrong insertion index in three call sites — `bptr_node_split:723` (new element placement during split), `bptr_node_split:843` (separator into parent), `_node_promote:1001` (promoted key into parent). Keys inserted at wrong positions → unsorted nodes → broken B+Tree invariant. The sibling function `bptr_find_node` correctly returns `up` (= `lo`); this was a copy-paste error.
