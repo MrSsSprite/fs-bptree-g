@@ -31,7 +31,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 - **Description:** Binary search returns `md` (last midpoint) unconditionally. When the final comparison was `key > K[md]`, `md` is one less than the correct insertion index `lo`.
 - **Impact:** Wrong insertion index in three call sites — `bptr_node_split:723` (new element placement during split), `bptr_node_split:843` (separator into parent), `_node_promote:1001` (promoted key into parent). Keys inserted at wrong positions → unsorted nodes → broken B+Tree invariant. The sibling function `bptr_find_node` correctly returns `up` (= `lo`); this was a copy-paste error.
 
-### 4. `bptr_errno` stale after successful split
+### ✅ 4. `bptr_errno` stale after successful split
 - **File & Line:** `src/bptr_node.c:723` / `src/bptr_core.c:206`
 - **Description:** `bptr_node_split` calls `_node_key_search` which sets `bptr_errno = -1` (not-found, expected). The split succeeds but `bptr_errno` is never reset to 0. `bptr_node_insert` returns 0 (success). `bptr_insert` returns 0 (success). But `bptr_errno` reads `-1` (`BPTR_E_FN_INPUT`).
 - **Impact:** Caller sees success (return 0) but global `bptr_errno` indicates an error. Any code path checking `bptr_errno` after a successful split-insert gets a false error. Violates the API contract that `bptr_errno` is meaningful.
