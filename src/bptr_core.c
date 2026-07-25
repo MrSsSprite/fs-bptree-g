@@ -204,6 +204,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
    err_code = bptr_node_insert(self, find_res.node, find_res.idx, key, value);
    if (err_code) goto NODE_INSERT_ERR;
 
+   bptr_node_unload(self, find_res.node);
    return 0;
 
    /*-------------------------- Error Handling Zone --------------------------*/
