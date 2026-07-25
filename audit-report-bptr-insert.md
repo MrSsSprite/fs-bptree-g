@@ -60,7 +60,7 @@ The five critical bugs render the tree non-functional or silently data-corruptin
 - **Description:** Same class of bug as #7, but in `_node_promote` (called during internal-node splits). When the parent is not full, the promoted key and child pointer are inserted but `is_dirty` is not set.
 - **Impact:** Promoted separator keys and child pointers silently lost on eviction. The internal-node split effectively never happened from disk's perspective.
 
-### 9. Incomplete split error rollback: `node->next` / `next_n->prev` not restored
+### ✅ 9. Incomplete split error rollback: `node->next` / `next_n->prev` not restored
 - **File & Line:** `src/bptr_node.c:770` and `:762`
 - **Description:** `bptr_node_split` modifies leaf linked-list pointers (`node->next`, `next_n->prev`) in pre-work (lines 757–771) before main split logic. On error, `_node_drop(new_n)` frees the new node but does NOT restore the original linked-list pointers.
 - **Impact:** After rollback, `node->next` and `next_n->prev` point to a vacated/freed file slot. Range scans following these pointers dereference garbage. Both nodes are marked dirty → corruption persisted to disk on eviction.
