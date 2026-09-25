@@ -335,6 +335,7 @@ uint64_t fibonacci_hash_u64(uint64_t node_idx, uint_fast8_t shift)
 }
 
 
+// This function may not run correctly if cache->ht_cap is not a power of 2
 static struct cache_ht_entry *ht_lookup
  (struct bptr_cache *cache, bptr_node_t node_idx)
 {
