@@ -352,6 +352,7 @@ static struct cache_ht_entry *ht_lookup
          return ht_en;
 
       idx = (idx + 1) & ~(cache->ht_cap);
+      ht_en = cache->ht + idx;
       psl++;
     }
 
