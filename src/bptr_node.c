@@ -192,28 +192,6 @@ static inline
 void _node_val_erase(struct bptr *self, struct bptr_node *node,
                      uint_fast32_t idx);
 /**
- * @brief   Search for a key within a node's key array
- *
- * Performs a binary search to locate the first key in @p node that is not less
- * than @p key . This index serves as the exact match or the potential insertion
- * point.
- *
- * @param[in]  self  B+Tree instance.
- * @param[in]  node  node to be searched.
- * @param[in]  key   target key to locate.
- *
- * @return  The index of the lower bound of @p key
- * @retval  index    If the key is found, this is the index of the match.
- * @retval  index    If not found, this is the insertion point (the index of the
- *                   smallest key greater than @p key , or @c node->key_count if
- *                   @p key is the largest).
- * @remark  If an exact match is not found, @c bptr_errno is set to @c -1 .
- *          Otherwise, @c bptr_errno is set to @c 0 .
- */
-static inline
-uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
-                          const void *key);
-/**
  * @brief   Promote a key-node(reference) pair into a parent node
  *
  * Inserts the promoted key and child pointer of @p prm_n into @p par_n .
@@ -579,32 +557,6 @@ void _node_val_erase(struct bptr *self, struct bptr_node *node,
 }
 
 
-static inline
-uint32_t _node_key_search(struct bptr *self, struct bptr_node *node,
-                               const void *key)
-{
-   uint_fast32_t lo, md, hi;
-   // Edge Case: empty (i.e., key_count == 0)
-   int cmp_res = -1;
-
-   for (lo = 0, hi = node->key_count, md = hi / 2;
-        lo != hi; md = lo + (hi - lo) / 2)
-    {
-      cmp_res = self->compare(key, node->keys + md * self->key_size);
-      if (cmp_res < 0)
-         hi = md;
-      else if (cmp_res > 0)
-         lo = md + 1;
-      else
-         break;
-    }
-
-   if (cmp_res == 0) bptr_errno = 0;
-   else              bptr_errno = -1;
-   return md;
-}
-
-
 BPTR_STATIC
 bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val)
@@ -622,7 +574,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    if (node->key_count != max_sz) goto PRE_WORK_ERR;
 
    /*{--------------- Pre-Work: Find low bound of new element ----------------*/
-   new_elem_idx = _node_key_search(self, node, key);
+   new_elem_idx = bptr_node_key_search(self, node, key);
    // newly inserted element should not match with another existing element
    if (bptr_errno == 0) goto PRE_WORK_ERR;
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
@@ -742,7 +694,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
       else
        {
-         uint32_t idx = _node_key_search(self, parent_n, new_n->keys);
+         uint32_t idx = bptr_node_key_search(self, parent_n, new_n->keys);
          _node_key_insert(self, parent_n, new_n->keys, idx);
          _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
          parent_n->key_count++;
@@ -900,7 +852,7 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
    else
     {
       // find insertion point
-      uint32_t idx = _node_key_search(self, par_n, key);
+      uint32_t idx = bptr_node_key_search(self, par_n, key);
       _node_key_insert(self, par_n, key, idx);
       _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
       par_n->key_count++;
