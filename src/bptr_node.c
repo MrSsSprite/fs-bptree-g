@@ -566,17 +566,17 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    struct bptr_node *new_n, *parent_n, *next_n;
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
-                                           self->node_bound.brch.up) - 1,
-                 new_elem_idx;
+                                           self->node_bound.brch.up) - 1;
+   bptr_node_ki_t new_elem_idx;
    bptr_node_t ret;
 
    // Check full; error if not already full
    if (node->key_count != max_sz) goto PRE_WORK_ERR;
 
    /*{--------------- Pre-Work: Find low bound of new element ----------------*/
-   new_elem_idx = bptr_node_key_search(self, node, key);
    // newly inserted element should not match with another existing element
-   if (bptr_errno == 0) goto PRE_WORK_ERR;
+   if (bptr_node_key_search(self, node, key, &new_elem_idx) == 0)
+      goto PRE_WORK_ERR;
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 
    /*{--------------------- Pre-Work: Load Parent Node -----------------------*/
@@ -694,7 +694,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
        }
       else
        {
-         uint32_t idx = bptr_node_key_search(self, parent_n, new_n->keys);
+         bptr_node_ki_t idx;
+         bptr_node_key_search(self, parent_n, new_n->keys, &idx);
          _node_key_insert(self, parent_n, new_n->keys, idx);
          _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
          parent_n->key_count++;
@@ -852,7 +853,8 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
    else
     {
       // find insertion point
-      uint32_t idx = bptr_node_key_search(self, par_n, key);
+      bptr_node_ki_t idx;
+      bptr_node_key_search(self, par_n, key, &idx);
       _node_key_insert(self, par_n, key, idx);
       _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
       par_n->key_count++;

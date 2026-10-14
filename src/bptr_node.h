@@ -83,21 +83,22 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
  * than @p key . This index serves as the exact match or the potential insertion
  * point.
  *
- * @param[in]  self  B+Tree instance.
- * @param[in]  node  node to be searched.
- * @param[in]  key   target key to locate.
+ * @param[in]  self     B+Tree instance.
+ * @param[in]  node     node to be searched.
+ * @param[in]  key      target key to locate.
+ * @param[out] result   Index of insertion point found by the function. (i.e.,
+ *                      the index of the lower bound of @p key)
+ *                      If the key is found, this is the index of the match.
+ *                      If not found, this is the insertion point (the index of
+ *                      the smallest key greater than @p key , or @c
+ *                      node->key_count if @p key is the largest).
  *
- * @return  The index of the lower bound of @p key
- * @retval  index    If the key is found, this is the index of the match.
- * @retval  index    If not found, this is the insertion point (the index of the
- *                   smallest key greater than @p key , or @c node->key_count if
- *                   @p key is the largest).
- * @remark  If an exact match is not found, @c bptr_errno is set to @c -1 .
- *          Otherwise, @c bptr_errno is set to @c 0 .
+ * @retval  0        @p key is found in the B+Tree..
+ * @retval  1        @p key is not found in the B+Tree.
  */
 static inline
-uint32_t bptr_node_key_search(struct bptr *self, struct bptr_node *node,
-                              const void *key)
+_Bool bptr_node_key_search(struct bptr *self, struct bptr_node *node,
+                           const void *key, bptr_node_ki_t *result)
 {
    uint_fast32_t lo, md, hi;
    // Edge Case: empty (i.e., key_count == 0)
@@ -115,9 +116,9 @@ uint32_t bptr_node_key_search(struct bptr *self, struct bptr_node *node,
          break;
     }
 
-   if (cmp_res == 0) bptr_errno = 0;
-   else              bptr_errno = -1;
-   return md;
+   *result = md;
+   if (cmp_res == 0) return 0;
+   else              return 1;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
