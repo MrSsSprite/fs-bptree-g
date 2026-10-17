@@ -915,7 +915,8 @@ PAR_SPLIT_ERR:       has_set_err = 1;
    next_n = bptr_node_fetch(self, node->next);
    if (next_n)
     { next_n->prev = node->node_idx; bptr_node_unload(self, next_n); }
-   else  // TODO: signal fatal error
+   else  // fatal error
+      exit(bptr_errno); // bptr_node_fetch sets `bptr_errno'
 NEXT_N_UPDATE_ERROR: has_set_err = 1;
    _node_drop(self, new_n);
 NEW_N_MALLOC_ERR:    has_set_err = 1;
