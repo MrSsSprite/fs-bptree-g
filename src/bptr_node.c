@@ -666,7 +666,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
                                            self->node_bound.brch.up) - 1,
-                 new_elem_idx;
+                 new_elem_idx, new_i;
    bptr_node_t ret;
 
    // Check full; error if not already full
@@ -885,8 +885,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (size_t)BPTR_PTR_SIZE * new_n->key_count);
        }
 
-      // update parent member of children that are assigned new_n
-      for (uint32_t new_i = 0; new_i <= new_n->key_count; new_i++)
+      // update parent member of children that are reassigned to new_n
+      for (new_i = 0; new_i <= new_n->key_count; new_i++)
        {
          struct bptr_node *child_n =
             bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
@@ -907,7 +907,15 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 /*--------------------------- Error Handling Zone ----------------------------*/
 // restore back to the state before fn call on error
 CHILD_N_UPDATE_ERR:  has_set_err = 1;
-   // TODO: children point back to old node
+   // children point back to old node
+   while (new_i--)
+    {
+      struct bptr_node *child_n =
+         bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
+      if (child_n == NULL) exit(bptr_errno); // fatal error
+      child_n->parent = node->node_idx;
+      bptr_node_unload(self, child_n);
+    }
 PAR_SPLIT_ERR:       has_set_err = 1;
    if (node->is_leaf) self->record_cnt--;
    node->key_count = max_sz;
