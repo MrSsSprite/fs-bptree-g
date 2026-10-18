@@ -95,29 +95,61 @@ struct bptr
    int (*compare)(const void *lhs, const void *rhs);
 };
 
+/**
+ * @brief   Search result identifying a leaf and a key position within it.
+ *
+ * Returned by bptr_find_node() for either an existing key or its insertion
+ * position.
+ *
+ * @warning The result is usable only when `node` is not NULL; otherwise,
+ *          ignore `is_found` and `idx` and inspect @c bptr_errno for the cause.
+ *
+ * @see     bptr_find_node()
+ */
 struct node_idx_pair
 {
-   _Bool is_found;
-   struct bptr_node *node;
-   bptr_node_ki_t idx;
+   _Bool is_found;         ///< Whether target key is found.
+   struct bptr_node *node; ///< Target leaf or NULL on error
+   bptr_node_ki_t idx;     ///< Insertion position of the @p key
 };
 /*---------------------------- Public Structs END ----------------------------*/
 
 /*------------------------ Public Function Prototypes ------------------------*/
 /**
- * @brief   Find insertion point for the given @p key .
+ * @brief   Find the leaf and key index for a match or insertion.
  *
- * Search @p self for the insertion point for @p key . This function returns a
- * @c struct to represent the result. The result is @b NOT valid if @c node is
- * @c NULL ; is such scenario, there was an error occurred during program run,
- * and @c bptr_errno is set to indicate what erroneous condition was encounted.
+ * Search @p self for @p key using the tree's comparison function. If the key
+ * is absent, locate its insertion position within the target leaf. This
+ * function does not insert a key or create a node for an empty tree.
  *
- * @param[in]  self     B+Tree instance.
- * @param[in]  key      target key
+ * @param[in,out] self  Initialized B+Tree instance whose cache is used during
+ *                      the search.
+ * @param[in]     key   Target key in the representation expected by the tree's
+ *                      comparison function.
  *
- * @return  Search result. It's valid iff either @c node is not @c NULL .
+ * @return  A node_idx_pair with the following members on success:
+ *          - `node`: The target leaf, never @c NULL on success. Caller is
+ *                    responsible for releasing `node` (through
+ *                    `bptr_node_unload()`) if `node` is not @c NULL .
+ *          - `is_found`: 1 if the key exists, or 0 if it is absent.
+ *          - `idx`: The zero-based index of the matching key, or, if absent,
+ *                   the index of the first key greater than @p key in this
+ *                   leaf. If all keys in the leaf are smaller, this is
+ *                   `node->key_count`, indicating an insertion after the last
+ *                   key.
  *
- * @see  struct node_idx_pair
+ * @remark  On success, the caller must release the returned leaf with
+ *          bptr_node_unload() when it is no longer needed.
+ *
+ * @note    If no usable position is obtained, `node` is NULL and the other
+ *          members must be ignored. An empty tree sets @c bptr_errno to
+ *          @c BPTR_E_EMPTY_TREE; a node-fetch failure sets it to the
+ *          corresponding error code. A missing key in a nonempty tree is a
+ *          successful search for an insertion position.
+ * @note    Determine success from `node`. The function does not guarantee
+ *          that @c bptr_errno is cleared on success.
+ *
+ * @see     node_idx_pair, bptr_node_unload()
  */
 struct node_idx_pair bptr_find_node(struct bptr *self, const void *key);
 /*---------------------- Public Function Prototypes END ----------------------*/
