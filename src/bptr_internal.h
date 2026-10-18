@@ -29,6 +29,7 @@
 
 /*----------------------------- Public Typedefs ------------------------------*/
 typedef uint_fast64_t bptr_node_t;
+typedef uint32_t bptr_node_ki_t;
 /*--------------------------- Public Typedefs END ----------------------------*/
 
 /*------------------------------ Public Macros -------------------------------*/
@@ -92,6 +93,13 @@ struct bptr
    uint_fast32_t height;
 
    int (*compare)(const void *lhs, const void *rhs);
+};
+
+struct node_idx_pair
+{
+   _Bool is_found;
+   struct bptr_node *node;
+   bptr_node_ki_t idx;
 };
 /*---------------------------- Public Structs END ----------------------------*/
 

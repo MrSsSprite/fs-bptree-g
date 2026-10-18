@@ -11,12 +11,6 @@
 
 
 /*----------------------------- Private Structs ------------------------------*/
-struct node_idx_pair
-{
-   _Bool is_found;
-   struct bptr_node *node;
-   bptr_node_ki_t idx;
-};
 /*--------------------------- Private Structs END ----------------------------*/
 
 
