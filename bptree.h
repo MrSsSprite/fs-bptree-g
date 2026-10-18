@@ -25,6 +25,7 @@
 #define BPTR_E_FN_INPUT    (-1)
 #define BPTR_E_GT_MAXSIZE  (-2)
 #define BPTR_E_NOT_FOUND   (-3)     // Result Not Found
+#define BPTR_E_EMPTY_TREE  (-4)     // Tree is empty
 /*---------------------------- Public Define END -----------------------------*/
 
 /*------------------------ Public Struct Declaration -------------------------*/

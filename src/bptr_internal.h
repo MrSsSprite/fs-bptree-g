@@ -96,6 +96,22 @@ struct bptr
 /*---------------------------- Public Structs END ----------------------------*/
 
 /*------------------------ Public Function Prototypes ------------------------*/
+/**
+ * @brief   Find insertion point for the given @p key .
+ *
+ * Search @p self for the insertion point for @p key . This function returns a
+ * @c struct to represent the result. The result is @b NOT valid if @c node is
+ * @c NULL ; is such scenario, there was an error occurred during program run,
+ * and @c bptr_errno is set to indicate what erroneous condition was encounted.
+ *
+ * @param[in]  self     B+Tree instance.
+ * @param[in]  key      target key
+ *
+ * @return  Search result. It's valid iff either @c node is not @c NULL .
+ *
+ * @see  struct node_idx_pair
+ */
+struct node_idx_pair bptr_find_node(struct bptr *self, const void *key);
 /*---------------------- Public Function Prototypes END ----------------------*/
 
 #endif
