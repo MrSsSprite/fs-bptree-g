@@ -575,7 +575,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 
    /*{--------------- Pre-Work: Find low bound of new element ----------------*/
    // newly inserted element should not match with another existing element
-   if (bptr_node_key_search(self, node, key, &new_elem_idx) == 0)
+   if (bptr_node_key_search(self, node, key, &new_elem_idx))
       goto PRE_WORK_ERR;
    /*}--------------- Pre-Work: Find low bound of new element ----------------*/
 

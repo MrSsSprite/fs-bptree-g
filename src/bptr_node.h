@@ -93,8 +93,8 @@ struct bptr_node *bptr_node_fetch(struct bptr *self, bptr_node_t node_idx);
  *                      the smallest key greater than @p key , or @c
  *                      node->key_count if @p key is the largest).
  *
- * @retval  0        @p key is found in the B+Tree..
- * @retval  1        @p key is not found in the B+Tree.
+ * @retval  1        @p key is found in the B+Tree.
+ * @retval  0        @p key is not found in the B+Tree.
  */
 static inline
 _Bool bptr_node_key_search(struct bptr *self, struct bptr_node *node,
@@ -117,8 +117,8 @@ _Bool bptr_node_key_search(struct bptr *self, struct bptr_node *node,
     }
 
    *result = md;
-   if (cmp_res == 0) return 0;
-   else              return 1;
+   if (cmp_res == 0) return 1;
+   else              return 0;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
