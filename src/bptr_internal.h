@@ -106,7 +106,7 @@ struct bptr
  *
  * @see     bptr_find_node()
  */
-struct node_idx_pair
+struct bptr_find_res
 {
    _Bool is_found;         ///< Whether target key is found.
    struct bptr_node *node; ///< Target leaf or NULL on error
@@ -127,7 +127,7 @@ struct node_idx_pair
  * @param[in]     key   Target key in the representation expected by the tree's
  *                      comparison function.
  *
- * @return  A node_idx_pair with the following members on success:
+ * @return  A bptr_find_res with the following members on success:
  *          - `node`: The target leaf, never @c NULL on success. Caller is
  *                    responsible for releasing `node` (through
  *                    `bptr_node_unload()`) if `node` is not @c NULL .
@@ -149,9 +149,9 @@ struct node_idx_pair
  * @note    Determine success from `node`. The function does not guarantee
  *          that @c bptr_errno is cleared on success.
  *
- * @see     node_idx_pair, bptr_node_unload()
+ * @see     bptr_find_res, bptr_node_unload()
  */
-struct node_idx_pair bptr_find_node(struct bptr *self, const void *key);
+struct bptr_find_res bptr_find_node(struct bptr *self, const void *key);
 /*---------------------- Public Function Prototypes END ----------------------*/
 
 #endif

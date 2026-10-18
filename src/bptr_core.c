@@ -165,7 +165,7 @@ IO_FCLOSE_ERR:    _set_err_code(fn_err);
 // Replaces the value if the key already exists in the tree
 int bptr_insert(struct bptr *self, const void *key, const void *value)
 {
-   struct node_idx_pair find_res;
+   struct bptr_find_res find_res;
 
    //TODO: temporary implementation; cache pool should be involved later
 
@@ -188,7 +188,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
 
 
 /*---------------------------- Private Functions -----------------------------*/
-struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
+struct bptr_find_res bptr_find_node(struct bptr *self, const void *key)
 {
    struct bptr_node *node;
 
@@ -196,7 +196,7 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
    if (self->root_idx == 0)
     {
       bptr_errno = BPTR_E_EMPTY_TREE;
-      return (struct node_idx_pair){ 0, NULL };
+      return (struct bptr_find_res){ 0, NULL };
     }
 
    for (node = bptr_node_fetch(self, self->root_idx); ;)
@@ -206,12 +206,12 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
       _Bool is_found;   // must be boolean type for correct arithmetic
 
       // Error: bptr_node_fetch() sets bptr_errno on error
-      if (node == NULL) return (struct node_idx_pair){ 0, NULL };
+      if (node == NULL) return (struct bptr_find_res){ 0, NULL };
 
       is_found = bptr_node_key_search(self, node, key, &srch_res);
 
       if (node->is_leaf)   // base case: leaf node
-         return (struct node_idx_pair){ is_found, node, srch_res };
+         return (struct bptr_find_res){ is_found, node, srch_res };
 
       // setup for next iteration
       // on exact match, search path is routed to (key_idx + 1)th child;
