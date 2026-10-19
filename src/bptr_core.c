@@ -184,10 +184,8 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
    //TODO
    exit(BPTR_E_TODO);
 }
-/*---------------------- Public Function Definition END ----------------------*/
 
 
-/*---------------------------- Private Functions -----------------------------*/
 struct bptr_find_res bptr_find_node(struct bptr *self, const void *key)
 {
    struct bptr_node *node;
@@ -224,4 +222,8 @@ struct bptr_find_res bptr_find_node(struct bptr *self, const void *key)
    // either returns due to empty tree or on leaf (in for loop)
    exit(BPTR_E_UNREACHABLE);
 }
+/*---------------------- Public Function Definition END ----------------------*/
+
+
+/*---------------------------- Private Functions -----------------------------*/
 /*-------------------------- Private Functions END ---------------------------*/
