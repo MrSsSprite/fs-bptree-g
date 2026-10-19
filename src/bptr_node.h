@@ -120,6 +120,74 @@ _Bool bptr_node_key_search(struct bptr *self, struct bptr_node *node,
    if (cmp_res == 0) return 0;
    else              return 1;
 }
+
+
+/**
+ * @brief   Insert a key–value pair into a leaf node at a given index
+ *
+ * Inserts @p key and @p value into @p node at position @p idx , shifting
+ * existing entries rightward to make room.  If @p node is already at maximum
+ * capacity (@c node->key_count equals @c leaf.up - 1 ), the insertion is
+ * delegated to @c bptr_node_split , which splits the node and may cascade
+ * upward.
+ *
+ * @param[in,out] self  bptr object.  @c record_cnt is incremented on success.
+ * @param[in,out] node  target leaf node.  Its @c keys , @c vals , and
+ *                      @c key_count are modified.  If the node is full, a
+ *                      split may also update @c node->parent , @c node->next ,
+ *                      and global tree state (@c root_idx , @c height ,
+ *                      @c node_cnt ).
+ * @param[in]     idx   insertion index (0-based), typically obtained from
+ *                      @c _node_key_search .  Must be in the range
+ *                      @c [0, node->key_count] .
+ * @param[in]     key   pointer to the key to copy into @c node->keys .
+ * @param[in]     value pointer to the value to copy into @c node->vals .
+ *
+ * @return  error code
+ * @retval  0           success; the key–value pair was inserted (possibly
+ *                      via a split).
+ * @retval  non-zero    failure; @c bptr_errno is set.  This only occurs when
+ *                      the node was full and @c bptr_node_split failed.  In
+ *                      that case @p node is left unmodified ( @c key_count
+ *                      is restored by the split's rollback).
+ *
+ * @warning  This function is designed for leaf nodes.  Calling it on an
+ *           internal (branch) node with a full key count causes the split
+ *           path to misbehave because the capacity check compares against
+ *           @c leaf.up rather than @c brch.up .
+ * @warning  It is the caller's responsibility to ensure @p idx is valid
+ *           (0 ≤ @p idx ≤ @c node->key_count ) and that @p key does not
+ *           already exist in @p node .  Neither condition is checked
+ *           here — violating them results in undefined behaviour.
+ */
+int bptr_node_insert
+ (struct bptr *self, struct bptr_node *node, bptr_node_ki_t idx,
+  const void *key, const void *value);
+/**
+ * @brief   Drop the root node and reset the tree to an empty state
+ *
+ * Frees the file space occupied by @p node (which must be the current root)
+ * via @c _node_drop and resets all tree-level counters (@c root_idx ,
+ * @c height , @c record_cnt , @c node_cnt ) to zero, leaving the tree in
+ * its pristine, just-created state.
+ *
+ * @param[in,out] self  bptr object.  @c root_idx , @c height ,
+ *                      @c record_cnt , and @c node_cnt are zeroed.
+ * @param[in,out] node  root node to drop.  Its file space is vacated and
+ *                      its cache entry is reclaimed.
+ *
+ * @return  error code
+ * @retval  0     success; the tree is now empty.
+ * @retval  !=0   failure from @c _node_drop ( @c bptr_errno is set by
+ *                @c bptr_node_vacate ).  Tree state is NOT modified on
+ *                failure — @c self 's counters remain unchanged.
+ *
+ * @warning  Use ONLY when @p node is the sole node in the tree (i.e., the
+ *           root with no children).  Calling this on a root that still has
+ *           children leaks those child nodes and leaves the tree in an
+ *           inconsistent state.
+ */
+int bptr_node_root_drop(struct bptr *self, struct bptr_node *node);
 /*--------------------------- Public Functions END ---------------------------*/
 
 

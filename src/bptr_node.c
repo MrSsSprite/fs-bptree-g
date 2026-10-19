@@ -216,12 +216,79 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
  * @brief   Free a node and Drop all changes
  *
  * @param[in,out] self  bptr obj.
- * @param[in]     node  target node to be droped.
+ * @param[in.out] node  target node to be droped.
  *
  * @return  error code
  */
 static inline
 int _node_drop(struct bptr *self, struct bptr_node *node);
+
+
+/**
+ * @brief   Split a full B+tree node around a new key–value pair
+ *
+ * Splits @p node (which must be at maximum capacity) into two nodes by
+ * distributing its existing keys and values along with the incoming
+ * @p key / @p val .  A new sibling node is allocated, the leaf-level
+ * doubly-linked list is stitched to place it immediately after the original
+ * node, and the separator key together with the new child pointer are
+ * inserted into the parent.  If the parent is already full the split
+ * cascades upward via a recursive call.
+ *
+ * When @p node has no parent (i.e., it is the root) a fresh parent is
+ * created and @c self->height is incremented; the original node becomes
+ * the leftmost child.
+ *
+ * **Leaf-split specifics.**
+ * The new node receives @c leaf.up / 2 keys (the higher half), while the
+ * original node keeps the lower half.  After the data are moved, the first
+ * key of the new node is used as the separator and is promoted into the
+ * parent together with the new node's pointer.  @c self->record_cnt is
+ * incremented to account for the newly inserted record.
+ *
+ * **Internal-node specifics.**
+ * One key is promoted to the parent via @c _node_promote ; the keys and
+ * child pointers are then distributed so that the original node keeps the
+ * keys strictly left of the promotion point and the new node receives the
+ * keys strictly right of it.  After distribution every child pointer owned
+ * by the new node has its @c parent field rewritten to point to the new
+ * node.
+ *
+ * @param[in,out] self  bptr object.  @c node_cnt is incremented for the
+ *                      new sibling (and for a new parent, if one is
+ *                      created).  For leaf splits @c record_cnt is also
+ *                      incremented.  @c height and @c root_idx may be
+ *                      updated when splitting the root.
+ * @param[in,out] node  the full node to split.  Its @c key_count , keys,
+ *                      vals, @c next , and (if it was the root) @c parent
+ *                      are modified.
+ * @param[in]     key   new key to insert during the split.
+ * @param[in]     val   new value to insert during the split.  For internal
+ *                      nodes this is a child pointer.
+ *
+ * @return  node index of the newly created sibling.
+ * @retval  >0   success; the returned value is the index of the new
+ *               sibling node.
+ * @retval  0    failure; @c bptr_errno is set and all side effects are
+ *               rolled back — the new sibling (and any freshly created
+ *               parent) are dropped, @c key_count is restored, and
+ *               @c record_cnt / @c height / @c root_idx are reverted
+ *               where applicable.
+ *
+ * @pre  @p node must be at maximum capacity (@c node->key_count equals
+ *       the applicable @c node_bound up bound minus one).  Calling this
+ *       function on a non-full node sets @c bptr_errno to
+ *       @c BPTR_E_FN_INPUT and returns 0.
+ * @pre  @p key must not already exist in @p node ; a duplicate key causes
+ *       the same early-exit behaviour.
+ *
+ * @note  The forward declaration carries @c BPTR_STATIC because
+ *        @c _node_promote (defined earlier) may call this function
+ *        recursively, creating a mutual recursion between the two.
+ */
+BPTR_STATIC
+bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
+                            const void *key, const void *val);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -336,6 +403,38 @@ int bptr_node_flush(struct bptr *self, struct bptr_node *node)
 
 FLUSH_ERR:  _set_err_code(fn_err);
    return err_code;
+}
+
+
+int bptr_node_insert
+ (struct bptr *self, struct bptr_node *node, bptr_node_ki_t idx,
+  const void *key, const void *value)
+{
+   // node full
+   if (++node->key_count == self->node_bound.leaf.up)
+    {
+      node->key_count--;
+      if (bptr_node_split(self, node, key, value) == 0)
+         return bptr_errno;   // split should set bptr_errno
+      return 0;
+    }
+
+   _node_key_insert(self, node, key, idx);
+   _node_val_insert(self, node, value, idx);
+   // key_count was incremented above
+   node->is_dirty = 1;
+   self->record_cnt++;
+   return 0;
+}
+
+
+int bptr_node_root_drop(struct bptr *self, struct bptr_node *node)
+{
+   int err_code = _node_drop(self, node);
+   if (err_code) return err_code;
+   self->root_idx = 0;
+   self->height = self->record_cnt = self->node_cnt = 0;
+   return 0;
 }
 /*--------------------------- Public Functions END ---------------------------*/
 
@@ -567,7 +666,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
    _Bool has_new_parent;
    uint_fast32_t max_sz = (node->is_leaf ? self->node_bound.leaf.up :
                                            self->node_bound.brch.up) - 1;
-   bptr_node_ki_t new_elem_idx;
+   bptr_node_ki_t new_elem_idx, new_i;
    bptr_node_t ret;
 
    // Check full; error if not already full
@@ -699,6 +798,7 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
          _node_key_insert(self, parent_n, new_n->keys, idx);
          _node_child_insert(self, parent_n, new_n->node_idx, idx + 1);
          parent_n->key_count++;
+         parent_n->is_dirty = 1;
        }
     }
    else  // internal node
@@ -786,8 +886,8 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                 (size_t)BPTR_PTR_SIZE * new_n->key_count);
        }
 
-      // update parent member of children that are assigned new_n
-      for (uint32_t new_i = 0; new_i <= new_n->key_count; new_i++)
+      // update parent member of children that are reassigned to new_n
+      for (new_i = 0; new_i <= new_n->key_count; new_i++)
        {
          struct bptr_node *child_n =
             bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
@@ -808,10 +908,24 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
 /*--------------------------- Error Handling Zone ----------------------------*/
 // restore back to the state before fn call on error
 CHILD_N_UPDATE_ERR:  has_set_err = 1;
-   // TODO: children point back to old node
+   // children point back to old node
+   while (new_i--)
+    {
+      struct bptr_node *child_n =
+         bptr_node_fetch(self, _node_brch_vals_get(self, new_n, new_i));
+      if (child_n == NULL) exit(bptr_errno); // fatal error
+      child_n->parent = node->node_idx;
+      bptr_node_unload(self, child_n);
+    }
 PAR_SPLIT_ERR:       has_set_err = 1;
    if (node->is_leaf) self->record_cnt--;
    node->key_count = max_sz;
+   node->next = new_n->next;
+   next_n = bptr_node_fetch(self, node->next);
+   if (next_n)
+    { next_n->prev = node->node_idx; bptr_node_unload(self, next_n); }
+   else  // fatal error
+      exit(bptr_errno); // bptr_node_fetch sets `bptr_errno'
 NEXT_N_UPDATE_ERROR: has_set_err = 1;
    _node_drop(self, new_n);
 NEW_N_MALLOC_ERR:    has_set_err = 1;
@@ -858,6 +972,7 @@ int _node_promote(struct bptr *self, struct bptr_node *par_n,
       _node_key_insert(self, par_n, key, idx);
       _node_child_insert(self, par_n, prm_n->node_idx, idx + 1);
       par_n->key_count++;
+      par_n->is_dirty = 1;
     }
    return 0;
 }
