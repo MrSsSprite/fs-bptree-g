@@ -11,12 +11,6 @@
 
 
 /*----------------------------- Private Structs ------------------------------*/
-struct node_idx_pair
-{
-   _Bool is_found;
-   struct bptr_node *node;
-   bptr_node_ki_t idx;
-};
 /*--------------------------- Private Structs END ----------------------------*/
 
 
@@ -39,12 +33,6 @@ struct node_idx_pair
    (self)->node_bound.leaf.up += 1; \
 } while (0)
 /*---------------------------- Private Macros END ----------------------------*/
-
-
-/*----------------------- Private Function Declaration -----------------------*/
-BPTR_STATIC
-struct node_idx_pair bptr_find_node(struct bptr *self, const void *key);
-/*--------------------- Private Function Declaration END ---------------------*/
 
 
 /*----------------------------- Public Variable ------------------------------*/
@@ -177,7 +165,7 @@ IO_FCLOSE_ERR:    _set_err_code(fn_err);
 // Replaces the value if the key already exists in the tree
 int bptr_insert(struct bptr *self, const void *key, const void *value)
 {
-   struct node_idx_pair find_res;
+   struct bptr_find_res find_res;
 
    //TODO: temporary implementation; cache pool should be involved later
 
@@ -196,51 +184,37 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
    //TODO
    exit(BPTR_E_TODO);
 }
-/*---------------------- Public Function Definition END ----------------------*/
 
 
-/*---------------------------- Private Functions -----------------------------*/
-// bptr_errno is set to non-0 on error;
-// the return value is valid iff bptr_errno is 0
-// if the tree is not empty && the key is not found,
-//    idx refers to the smallest key that is greater than the key for which the 
-//    table is searched. idx ref to one-pass the last valid key
-BPTR_STATIC
-struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
+struct bptr_find_res bptr_find_node(struct bptr *self, const void *key)
 {
    struct bptr_node *node;
-   bptr_node_ki_t lo, md, up;
-   int cmp_res, err_code;
 
-   bptr_errno = 0;
    // Empty tree
    if (self->root_idx == 0)
-    { bptr_errno = 0; return (struct node_idx_pair){ 0, NULL }; }
+    {
+      bptr_errno = BPTR_E_EMPTY_TREE;
+      return (struct bptr_find_res){ 0, NULL };
+    }
 
    for (node = bptr_node_fetch(self, self->root_idx); ;)
     {
       bptr_node_t node_idx;
+      bptr_node_ki_t srch_res;
+      _Bool is_found;   // must be boolean type for correct arithmetic
+
       // Error: bptr_node_fetch() sets bptr_errno on error
-      if (node == NULL) return (struct node_idx_pair){ 0, NULL };
+      if (node == NULL) return (struct bptr_find_res){ 0, NULL };
 
-      for (lo = 0, up = node->key_count, md = up / 2;
-           lo < up; md = lo + (up - lo) / 2)
-       {
-         cmp_res = self->compare(key, (char*)node->keys + md * self->key_size);
-         if (cmp_res < 0)        up = md;
-         else if (cmp_res > 0)   lo = md + 1;
-         else                    break;
-       }
+      is_found = bptr_node_key_search(self, node, key, &srch_res);
 
-      // return when reaches a leaf node
-      if (node->is_leaf)
-       {
-         if (cmp_res == 0) return (struct node_idx_pair){ 1, node, md };
-         else { bptr_errno = 0; return (struct node_idx_pair){ 0, node, up }; }
-       }
+      if (node->is_leaf)   // base case: leaf node
+         return (struct bptr_find_res){ is_found, node, srch_res };
 
       // setup for next iteration
-      node_idx = _node_brch_vals_get(self, node, cmp_res == 0 ? md + 1 : up);
+      // on exact match, search path is routed to (key_idx + 1)th child;
+      // if not matched, search path is routed to key_idx th child.
+      node_idx = _node_brch_vals_get(self, node, srch_res + is_found);
       bptr_node_unload(self, node);
       node = bptr_node_fetch(self, node_idx);
     }
@@ -248,4 +222,8 @@ struct node_idx_pair bptr_find_node(struct bptr *self, const void *key)
    // either returns due to empty tree or on leaf (in for loop)
    exit(BPTR_E_UNREACHABLE);
 }
+/*---------------------- Public Function Definition END ----------------------*/
+
+
+/*---------------------------- Private Functions -----------------------------*/
 /*-------------------------- Private Functions END ---------------------------*/
