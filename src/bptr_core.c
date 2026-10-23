@@ -185,7 +185,7 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
     {
       has_new_node = 0;
       find_res = bptr_find_node(self, key);
-      if (bptr_errno) goto FIND_NODE_ERR;
+      if (find_res.node == NULL) goto FIND_NODE_ERR;
       if (find_res.is_found) goto KEY_EXIST_ERR;
     }
 
