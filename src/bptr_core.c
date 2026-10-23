@@ -162,7 +162,6 @@ IO_FCLOSE_ERR:    _set_err_code(fn_err);
 }
 
 
-// Replaces the value if the key already exists in the tree
 int bptr_insert(struct bptr *self, const void *key, const void *value)
 {
    struct bptr_find_res find_res;
