@@ -172,13 +172,13 @@ int bptr_insert(struct bptr *self, const void *key, const void *value)
 
    if (self->root_idx == 0)   // Empty Tree
     {
+      was_empty = 1;
       find_res.node = bptr_node_new(self, 0);
-      if (find_res.node == NULL) return bptr_errno;
+      if (find_res.node == NULL) goto NODE_NEW_ERR;
       find_res.node->prev = find_res.node->next = 0;
       find_res.idx = 0;
       self->root_idx = find_res.node->node_idx;
       self->node_cnt++;
-      was_empty = 1;
     }
    else
     {
@@ -200,8 +200,11 @@ KEY_EXIST_ERR:   _set_err_code(BPTR_E_KEY_EXIST);
    if (was_empty)
     { bptr_node_root_drop(self, find_res.node); self->root_idx = 0; }
    else              bptr_node_unload(self, find_res.node);
+if (was_empty) {
 FIND_NODE_ERR:   _set_err_code(bptr_errno);
+ } else {
 NODE_NEW_ERR:    _set_err_code(bptr_errno);
+ }
    return err_code;
 }
 
