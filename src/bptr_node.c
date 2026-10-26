@@ -412,9 +412,8 @@ int bptr_node_insert
   const void *key, const void *value)
 {
    // node full
-   if (++node->key_count == self->node_bound.leaf.up)
+   if (node->key_count + 1 == self->node_bound.leaf.up)
     {
-      node->key_count--;
       if (bptr_node_split(self, node, key, value) == 0)
          return bptr_errno;   // split should set bptr_errno
       return 0;
@@ -422,7 +421,7 @@ int bptr_node_insert
 
    _node_key_insert(self, node, key, idx);
    _node_val_insert(self, node, value, idx);
-   // key_count was incremented above
+   node->key_count++;
    node->is_dirty = 1;
    self->record_cnt++;
    return 0;
