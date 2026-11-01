@@ -49,6 +49,31 @@ struct bptr *bptr_init
 );
 struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs));
+/**
+ * @brief   Insert a new key-value pair into the tree.
+ *
+ * Search @p self for @p key using the tree's comparison function and insert
+ * the pair at its sorted position. Create a root leaf for an empty tree and
+ * split full nodes as needed. If an equivalent key already exists, reject
+ * the insertion without replacing its value.
+ *
+ * @param[in,out] self  Initialized B+Tree instance to modify.
+ * @param[in]     key   Key buffer containing key to be inserted.
+ * @param[in]     value Value buffer containing value to be inserted.
+ *
+ * @return  Execution result; use this return value to determine success.
+ * @retval  0(BPTR_E_SUCCESS) The pair was inserted successfully.
+ * @retval  BPTR_E_KEY_EXIST  An equivalent key already exists.
+ * @retval  other             Error propagated from node creation, search, or
+ *                            insertion, including cache and file I/O errors.
+ *
+ * @note    Key and value bytes are copied into the tree; ownership of the
+ *          input buffers remains with the caller.
+ * @note    The function does not guarantee that @c bptr_errno is cleared on
+ *          success or matches the returned error code on failure.
+ *
+ * @see     bptr_init(), bptr_load()
+ */
 int bptr_insert(struct bptr *self, const void *key, const void *value);
 int bptr_erase(struct bptr *self, const void *key);
 const void *bptr_find(struct bptr *self, const void *key);
