@@ -76,7 +76,32 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
  */
 int bptr_insert(struct bptr *self, const void *key, const void *value);
 int bptr_erase(struct bptr *self, const void *key);
-const void *bptr_find(struct bptr *self, const void *key);
+
+/**
+ * @brief   Find the value associated with a key.
+ *
+ * Search @p self for @p key using the tree's comparison function and copy
+ * the associated value to @p val_o.
+ *
+ * @param[in,out] self  Initialized B+Tree instance whose cache is used during
+ *                      the search.
+ * @param[in]     key   Target key in the representation expected by the tree's
+ *                      comparison function.
+ * @param[out]    val_o Buffer of at least the tree's value size in bytes. The
+ *                      value corresponding to @p key in the tree will be copied
+ *                      into this buffer on success.
+ *
+ * @return  Execution result.
+ * @retval  BPTR_E_SUCCESS    Key found and value copied to @p val_o.
+ * @retval  BPTR_E_NOT_FOUND  Key absent from a nonempty tree.
+ * @retval  BPTR_E_EMPTY_TREE Tree is empty.
+ * @retval  other             Node-fetch failure; the return value is the
+ *                            corresponding @c bptr_errno.
+ *
+ * @note    On failure, @p val_o is unchanged. An absent key does not set
+ *          @c bptr_errno; success does not guarantee that it is cleared.
+ */
+int bptr_find(struct bptr *self, const void *key, void *val_o);
 int bptr_find_range(struct bptr *self, const void *bg, const void *ed,
                     void **res_it);
 /**

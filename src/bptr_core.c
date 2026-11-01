@@ -32,6 +32,17 @@
    (self)->node_bound.leaf.low = CEIL_DIV((self)->node_bound.leaf.up, 2) - 1; \
    (self)->node_bound.leaf.up += 1; \
 } while (0)
+
+// Place right after the local variable declaration zone
+#define _bptr_find_base_top_(find_res) \
+   find_res = bptr_find_node(self, key); \
+   if (find_res.node == NULL) goto FIND_NODE_ERR; \
+   if (!find_res.is_found) \
+    { bptr_node_unload(self, find_res.node); return BPTR_E_NOT_FOUND; }
+
+// Place right before err_code return in err handling zone
+#define _bptr_find_base_bottom_ \
+FIND_NODE_ERR: _set_err_code(bptr_errno);
 /*---------------------------- Private Macros END ----------------------------*/
 
 
@@ -244,6 +255,25 @@ struct bptr_find_res bptr_find_node(struct bptr *self, const void *key)
 
    // either returns due to empty tree or on leaf (in for loop)
    exit(BPTR_E_UNREACHABLE);
+}
+
+
+int bptr_find(struct bptr *self, const void *key, void *val_o)
+{
+   int err_code; _Bool has_set_err = 0;
+   struct bptr_find_res find_res;
+   _bptr_find_base_top_(find_res);
+
+   memcpy(val_o,
+          ((char*)find_res.node->vals) + find_res.idx * self->value_size,
+          self->value_size);
+   bptr_node_unload(self, find_res.node);
+
+   return 0;
+
+   /*-------------------------- Error Handling Zone --------------------------*/
+_bptr_find_base_bottom_
+   return err_code;
 }
 /*---------------------- Public Function Definition END ----------------------*/
 
