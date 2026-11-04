@@ -56,6 +56,11 @@
       (self)->value_size * (node)->key_count : \
       ((self)->is_lite ? BPTR_LITE_PTR_BYTE : BPTR_NORM_PTR_BYTE) * \
          ((node)->key_count + 1))
+
+#define _node_at_min(self, node) \
+   (((node)->key_count - 1) == \
+    ((node)->is_leaf ? \
+      (self)->node_bound.leaf.low : (self)->node_bound.brch.low))
 /*---------------------------- Private Macro END -----------------------------*/
 
 
@@ -448,6 +453,38 @@ int bptr_node_insert
    node->is_dirty = 1;
    self->record_cnt++;
    return 0;
+}
+
+
+int bptr_node_erase(struct bptr *self, struct bptr_node *node,
+                    bptr_node_ki_t key_idx)
+{
+   int err_code; _Bool has_set_err = 0;
+   // check underflow
+   if (_node_at_min(self, node) && node->parent != 0)
+      /* TODO: try redistro else merge */;
+
+   if (node->is_leaf)
+    {
+      _node_key_erase(self, node, key_idx);
+      _node_val_erase(self, node, key_idx);
+      // modify the 0th key of a leaf
+      if (key_idx == 0 && (err_code = _node_sync_separator(self, node)))
+         goto SYNC_SEP_ERR;
+      self->record_cnt--;
+    }
+   else
+    {
+      _node_key_erase(self, node, key_idx);
+      _node_val_erase(self, node, key_idx + 1);
+    }
+   node->is_dirty = 1;
+   node->key_count--;
+
+   return 0;
+   /*-------------------------- Error Handling Zone --------------------------*/
+SYNC_SEP_ERR:  has_set_err = 1;
+   return err_code;
 }
 
 
