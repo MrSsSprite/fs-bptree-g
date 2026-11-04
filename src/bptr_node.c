@@ -290,6 +290,29 @@ int _node_drop(struct bptr *self, struct bptr_node *node);
 BPTR_STATIC
 bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
                             const void *key, const void *val);
+
+/**
+ * @brief   Synchronize an ancestor separator with a node's 0th key
+ *
+ * If @p node has no previous sibling, no separator is updated. Otherwise,
+ * this function walks up the parent chain until the child index is nonzero,
+ * copies the first key of @p node into the preceding separator of that
+ * parent, and marks the parent dirty.
+ *
+ * @param[in,out] self  @c bptr object used to fetch and unload nodes.
+ * @param[in]     node  node  whose first key is used as the separator.
+ *
+ * @return  status code
+ * @retval  0                    success, including when no update is needed
+ * @retval  BPTR_E_ITRNL_STATE   child index was not found
+ * @retval  other                node fetch failed; returns @c bptr_errno set
+ *                               by fetch function
+ *
+ * @note    The caller must provide a node with a valid and updated 0th key and
+ *          parent chain when an update is needed.
+ */
+static inline
+int _node_sync_separator(struct bptr *self, struct bptr_node *node);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -983,6 +1006,80 @@ int _node_drop(struct bptr *self, struct bptr_node *node)
 {
    int err_code = bptr_node_vacate(self, node->node_idx);
    bptr_cache_reclaim(self, node);
+   return err_code;
+}
+
+
+static inline
+_Bool _brch_val_search(struct bptr *self, struct bptr_node *node,
+                       bptr_node_t val, bptr_node_ki_t *result)
+{
+   uint_fast32_t lo, md, hi;
+   // Edge Case: empty (i.e., key_count == 0)
+   int cmp_res = -1;
+
+   for (lo = 0, hi = node->key_count + 1, md = hi / 2;
+        lo != hi; md = lo + (hi - lo) / 2)
+    {
+      bptr_node_t md_v = _node_brch_vals_get(self, node, md);
+      if (val < md_v)
+         hi = md;
+      else if (val > md_v)
+         lo = md + 1;
+      else
+         break;
+    }
+
+   *result = md;
+   if (cmp_res == 0) return 1;
+   else              return 0;
+}
+
+
+static inline
+int _node_sync_separator(struct bptr *self, struct bptr_node *node)
+{
+   int err_code; _Bool has_set_err = 0;
+   struct bptr_node *it_n, *par_n;
+
+   // if root is leaf, it's the only node and node->prev must be 0
+   if (node->prev == 0) return 0;
+
+   it_n = bptr_node_fetch(self, node->node_idx);
+   if (it_n == NULL) goto PIN_NODE_ERR;
+
+   while (1)
+    {
+      bptr_node_ki_t idx;
+
+      par_n = bptr_node_fetch(self, it_n->parent);
+      if (par_n == NULL) goto PAR_N_FETCH_ERR;
+
+      if (_brch_val_search(self, par_n, node->node_idx, &idx) == 0)
+         goto IDX_NOT_FOUND_ERR;
+      if (idx != 0)
+       {
+         memcpy(par_n->keys + (idx - 1) * self->key_size,
+                node->keys, self->key_size);
+         par_n->is_dirty = 1;
+         bptr_node_unload(self, par_n);
+         bptr_node_unload(self, it_n);
+         break;
+       }
+
+      bptr_node_unload(self, it_n);
+      it_n = par_n;
+    }
+
+   return 0;
+   /*-------------------------- Error Handling Zone --------------------------*/
+
+if (0) {
+IDX_NOT_FOUND_ERR:_set_err_code(BPTR_E_ITRNL_STATE);
+PAR_N_FETCH_ERR:  _set_err_code(bptr_errno);
+   bptr_node_unload(self, it_n);
+ }
+PIN_NODE_ERR:     _set_err_code(bptr_errno);
    return err_code;
 }
 /*-------------------------- Private Functions END ---------------------------*/
