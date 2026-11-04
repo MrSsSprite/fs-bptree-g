@@ -63,3 +63,6 @@ CLAUDE.md
 
 # Cache files
 .cache/
+
+# Doxygen outputs
+docs/doxygen
