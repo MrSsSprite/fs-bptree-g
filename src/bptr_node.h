@@ -46,7 +46,8 @@ struct bptr_node
 struct bptr_node *bptr_node_new
  (struct bptr *self, bptr_node_t parent);
  
-int bptr_node_erase(bptr_node_t node_idx);
+int bptr_node_erase(struct bptr *self, struct bptr_node *node,
+                    bptr_node_ki_t idx);
 int bptr_node_load
  (struct bptr *self, bptr_node_t node_idx, struct bptr_node *node);
 /**
