@@ -460,6 +460,7 @@ int bptr_node_erase(struct bptr *self, struct bptr_node *node,
                     bptr_node_ki_t key_idx)
 {
    int err_code; _Bool has_set_err = 0;
+
    // check underflow
    if (_node_at_min(self, node) && node->parent != 0)
       /* TODO: try redistro else merge */;
@@ -1117,6 +1118,44 @@ PAR_N_FETCH_ERR:  _set_err_code(bptr_errno);
    bptr_node_unload(self, it_n);
  }
 PIN_NODE_ERR:     _set_err_code(bptr_errno);
+   return err_code;
+}
+
+
+static inline
+int _node_try_redistribute(struct bptr *self, struct bptr_node *node)
+{
+   int err_code; _Bool has_set_err = 0;
+   int prev_sib_err = BPTR_E_SUCCESS;
+   struct bptr_node *sib_n, *par_n;
+   bptr_node_ki_t kc_sum,
+                  kc_threshold = ((node->is_leaf ?
+                                   self->node_bound.leaf.low :
+                                   self->node_bound.brch.low) + 1) * 2;
+
+   par_n = bptr_node_fetch(self, node->parent);
+   if (par_n == NULL) goto PAR_N_FETCH_ERR;
+
+   if (node->prev != 0)
+    {
+      sib_n = bptr_node_fetch(self, node->prev);
+      if (sib_n == NULL)
+       { prev_sib_err = bptr_errno; goto PREV_FETCH_FAILURE; }
+
+      kc_sum = node->key_count + sib_n->key_count;
+      if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
+
+      return 0;
+PREV_SIZE_FAILURE:
+      bptr_node_unload(self, sib_n);
+PREV_FETCH_FAILURE:;
+    }
+
+   return BPTR_E_TODO;
+   /*-------------------------- Error Handling Zone --------------------------*/
+   bptr_node_unload(self, par_n);
+PAR_N_FETCH_ERR:  _set_err_code(bptr_errno);
+
    return err_code;
 }
 /*-------------------------- Private Functions END ---------------------------*/
