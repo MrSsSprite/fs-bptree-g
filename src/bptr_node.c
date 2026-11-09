@@ -318,6 +318,23 @@ bptr_node_t bptr_node_split(struct bptr *self, struct bptr_node *node,
  */
 static inline
 int _node_sync_separator(struct bptr *self, struct bptr_node *node);
+
+/**
+ * @brief   Find a child reference in a branch node
+ *
+ * Searches the @c node->key_count + 1 child references for @p val .
+ *
+ * @param[in]  self     @c bptr object.
+ * @param[in]  node     branch node to search.
+ * @param[in]  val      child node index to find.
+ * @param[out] result   index of the matching reference, if found.
+ *
+ * @retval  1  reference found; @p result is set.
+ * @retval  0  reference not found; @p result is unchanged.
+ */
+static inline
+_Bool _brch_val_search(struct bptr *self, struct bptr_node *node,
+                       bptr_node_t val, bptr_node_ki_t *result);
 /*-------------------- Private Function Declarations END ---------------------*/
 
 
@@ -1052,25 +1069,10 @@ static inline
 _Bool _brch_val_search(struct bptr *self, struct bptr_node *node,
                        bptr_node_t val, bptr_node_ki_t *result)
 {
-   uint_fast32_t lo, md, hi;
-   // Edge Case: empty (i.e., key_count == 0)
-   int cmp_res = -1;
-
-   for (lo = 0, hi = node->key_count + 1, md = hi / 2;
-        lo != hi; md = lo + (hi - lo) / 2)
-    {
-      bptr_node_t md_v = _node_brch_vals_get(self, node, md);
-      if (val < md_v)
-         hi = md;
-      else if (val > md_v)
-         lo = md + 1;
-      else
-         break;
-    }
-
-   *result = md;
-   if (cmp_res == 0) return 1;
-   else              return 0;
+   for (uint_fast32_t i = 0; i <= node->key_count; i++)
+      if (_node_brch_vals_get(self, node, i) == val)
+       { *result = i; return 1; }
+   return 0;
 }
 
 
