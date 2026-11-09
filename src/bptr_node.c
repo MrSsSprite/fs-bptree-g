@@ -1099,7 +1099,7 @@ int _node_sync_separator(struct bptr *self, struct bptr_node *node)
       par_n = bptr_node_fetch(self, it_n->parent);
       if (par_n == NULL) goto PAR_N_FETCH_ERR;
 
-      if (_brch_val_search(self, par_n, node->node_idx, &idx) == 0)
+      if (_brch_val_search(self, par_n, it_n->node_idx, &idx) == 0)
          goto IDX_NOT_FOUND_ERR;
       if (idx != 0)
        {
