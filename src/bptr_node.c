@@ -1120,6 +1120,7 @@ int _node_sync_separator(struct bptr *self, struct bptr_node *node)
 
 if (0) {
 IDX_NOT_FOUND_ERR:_set_err_code(BPTR_E_ITRNL_STATE);
+   bptr_node_unload(self, par_n);
 PAR_N_FETCH_ERR:  _set_err_code(bptr_errno);
    bptr_node_unload(self, it_n);
  }
