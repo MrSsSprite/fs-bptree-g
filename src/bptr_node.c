@@ -1088,6 +1088,10 @@ int _node_sync_separator(struct bptr *self, struct bptr_node *node)
    it_n = bptr_node_fetch(self, node->node_idx);
    if (it_n == NULL) goto PIN_NODE_ERR;
 
+   // The following loop never fetches root's parent (UB) even if there is no
+   // explicit guard as it should logically terminate at latest when reaching
+   // the root since the only exception (leftmost leaf) is handled above
+   // (early return).
    while (1)
     {
       bptr_node_ki_t idx;
