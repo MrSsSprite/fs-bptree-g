@@ -1135,33 +1135,75 @@ int _node_try_redistribute(struct bptr *self, struct bptr_node *node)
    int err_code; _Bool has_set_err = 0;
    int prev_sib_err = BPTR_E_SUCCESS;
    struct bptr_node *sib_n, *par_n;
-   bptr_node_ki_t kc_sum,
-                  kc_threshold = ((node->is_leaf ?
-                                   self->node_bound.leaf.low :
-                                   self->node_bound.brch.low) + 1) * 2;
+   bptr_node_ki_t par_sepki;
+   const bptr_node_ki_t kc_threshold = ((node->is_leaf ?
+                                         self->node_bound.leaf.low :
+                                         self->node_bound.brch.low) + 1) * 2;
 
    par_n = bptr_node_fetch(self, node->parent);
    if (par_n == NULL) goto PAR_N_FETCH_ERR;
+   if (_brch_val_search(self, par_n, node->node_idx, &par_sepki) == 0)
+      goto NODE_NF_IN_PAR_ERR;
+   par_sepki--;
 
-   if (node->prev != 0)
+   if (par_sepki != 0)
     {
+      bptr_node_ki_t nkc,     ///< New keys Count of node
+                     kc_sum, it_st;
+
+      // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->prev);
       if (sib_n == NULL)
        { prev_sib_err = bptr_errno; goto PREV_FETCH_FAILURE; }
-
       kc_sum = node->key_count + sib_n->key_count;
       if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
 
-      return 0;
+      nkc = kc_sum / 2;
+      it_st = nkc - node->key_count;
+      sib_n->key_count = kc_sum - nkc;
+
+      // reserve space for insert
+      memmove(node->keys + it_st * self->key_size, node->keys,
+              node->key_count * self->key_size);
+      memmove(node->vals + it_st * self->value_size, node->vals,
+              (node->key_count + 1) * self->value_size);
+      node->key_count = nkc;
+      // take vals from sib_n; do NOT reorder as it_st changes in next statement
+      memcpy(node->vals,
+             sib_n->vals + (sib_n->key_count + 1) * self->value_size,
+             it_st * self->value_size);
+      // take parent separator key
+      memcpy(node->keys + --it_st * self->key_size,
+             par_n->keys + par_sepki * self->key_size,
+             self->key_size);
+      // take keys from sib_n
+      memcpy(node->keys, sib_n->keys + (sib_n->key_count + 1) * self->key_size,
+             it_st * self->key_size);
+      // get parent separator key from sib_n
+      memcpy(par_n->keys + par_sepki * self->key_size,
+             sib_n->keys + sib_n->key_count * self->key_size, self->key_size);
+
+      bptr_node_unload(self, sib_n);
+      goto SUCCESS_ZONE;
+      /*---------------------------- Failure Zone ----------------------------*/
 PREV_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
 PREV_FETCH_FAILURE:;
     }
 
-   return BPTR_E_TODO;
-   /*-------------------------- Error Handling Zone --------------------------*/
+   if (par_sepki + 1 < par_n->key_count)  // has right sibling
+    {
+      // TODO: redistribute with right sibling
+    }
+
+   /*----------------------------- Success Zone ------------------------------*/
+SUCCESS_ZONE:
    bptr_node_unload(self, par_n);
-PAR_N_FETCH_ERR:  _set_err_code(bptr_errno);
+   return 0;
+   /*-------------------------- Error Handling Zone --------------------------*/
+NODE_NF_IN_PAR_ERR:  _set_err_code(BPTR_E_ITRNL_STATE);
+   bptr_node_unload(self, par_n);
+PAR_N_FETCH_ERR:     _set_err_code(bptr_errno);
 
    return err_code;
 }
