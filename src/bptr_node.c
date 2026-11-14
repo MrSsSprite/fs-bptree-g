@@ -1193,9 +1193,48 @@ PREV_FETCH_FAILURE:;
 
    if (par_sepki + 1 < par_n->key_count)  // has right sibling
     {
-      // TODO: redistribute with right sibling
+      bptr_node_ki_t sib_nkc,   ///< New keys Count of sib_n
+                     bor_sz,  ///< # of kvs borrowed from sib_n
+                     kc_sum;
+
+      // fetch sib_n and ensure it's possible to redistribute
+      sib_n = bptr_node_fetch(self, node->next);
+      if (sib_n == NULL)
+       { prev_sib_err = bptr_errno; goto PREV_FETCH_FAILURE; }
+      kc_sum = node->key_count + sib_n->key_count;
+      if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
+
+      sib_nkc = kc_sum / 2;
+      bor_sz = sib_n->key_count - sib_nkc;
+
+      // borrow vals from sib_n
+      memcpy(node->vals + (node->key_count + 1) * self->value_size,
+             sib_n->vals, bor_sz * self->value_size);
+      // take separator key from par_n
+      memcpy(node->keys + node->key_count++ * self->key_size,
+             par_n->keys + par_sepki * self->key_size,
+             self->key_size);
+      // borrow keys from sib_n
+      memcpy(node->keys + node->key_count * self->key_size,
+             sib_n->keys, bor_sz - 1);
+      // rotate key to parent
+      memcpy(par_n->keys + par_sepki * self->key_size,
+             sib_n->keys + (bor_sz - 1) * self->key_size,
+             self->key_size);
+      // fill front of sib_n->{key,val}s
+      memcpy(sib_n->keys, sib_n->keys + bor_sz * self->key_size,
+             sib_nkc * self->key_size);
+      memcpy(sib_n->vals, sib_n->vals + bor_sz * self->value_size,
+             (sib_nkc + 1) * self->value_size);
+      // update stats
+      node->key_count = kc_sum - sib_nkc;
+      sib_n->key_count = sib_nkc;
+
+      bptr_node_unload(self, sib_n);
+      goto SUCCESS_ZONE;
     }
 
+   return BPTR_E_DECLINED;
    /*----------------------------- Success Zone ------------------------------*/
 SUCCESS_ZONE:
    bptr_node_unload(self, par_n);
