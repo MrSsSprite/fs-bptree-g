@@ -1153,7 +1153,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->prev);
-      if (sib_n == NULL) goto PREV_FETCH_FAILURE;
+      if (sib_n == NULL) goto SIB_FETCH_ERR;
       kc_sum = node->key_count + sib_n->key_count;
       if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
 
@@ -1199,7 +1199,7 @@ PREV_SIZE_FAILURE:
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->next);
-      if (sib_n == NULL) goto NEXT_FETCH_FAILURE;
+      if (sib_n == NULL) goto SIB_FETCH_ERR;
       kc_sum = node->key_count + sib_n->key_count;
       if (kc_sum < kc_threshold) goto NEXT_SIZE_FAILURE;
 
@@ -1243,8 +1243,7 @@ SUCCESS_ZONE:
    bptr_node_unload(self, par_n);
    return 0;
    /*-------------------------- Error Handling Zone --------------------------*/
-NEXT_FETCH_FAILURE:  _set_err_code(bptr_errno);
-PREV_FETCH_FAILURE:  _set_err_code(bptr_errno);
+SIB_FETCH_ERR:       _set_err_code(bptr_errno);
 NODE_NF_IN_PAR_ERR:  _set_err_code(BPTR_E_ITRNL_STATE);
    bptr_node_unload(self, par_n);
 PAR_N_FETCH_ERR:     _set_err_code(bptr_errno);
