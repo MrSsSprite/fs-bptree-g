@@ -1202,9 +1202,9 @@ PREV_FETCH_FAILURE:;
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->next);
       if (sib_n == NULL)
-       { prev_sib_err = bptr_errno; goto PREV_FETCH_FAILURE; }
+       { prev_sib_err = bptr_errno; goto NEXT_FETCH_FAILURE; }
       kc_sum = node->key_count + sib_n->key_count;
-      if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
+      if (kc_sum < kc_threshold) goto NEXT_SIZE_FAILURE;
 
       sib_nkc = kc_sum / 2;
       bor_sz = sib_n->key_count - sib_nkc;
@@ -1234,6 +1234,10 @@ PREV_FETCH_FAILURE:;
 
       bptr_node_unload(self, sib_n);
       goto SUCCESS_ZONE;
+      /*---------------------------- Failure Zone ----------------------------*/
+NEXT_SIZE_FAILURE:
+      bptr_node_unload(self, sib_n);
+NEXT_FETCH_FAILURE:;
     }
 
    return BPTR_E_DECLINED;
