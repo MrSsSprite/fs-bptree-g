@@ -1219,7 +1219,7 @@ PREV_FETCH_FAILURE:;
              self->key_size);
       // borrow keys from sib_n
       memcpy(node->keys + node->key_count * self->key_size,
-             sib_n->keys, bor_sz - 1);
+             sib_n->keys, (bor_sz - 1) * self->key_size);
       // rotate key to parent
       memcpy(par_n->keys + par_v_nodei * self->key_size,
              sib_n->keys + (bor_sz - 1) * self->key_size,
