@@ -1225,9 +1225,9 @@ PREV_FETCH_FAILURE:;
              sib_n->keys + (bor_sz - 1) * self->key_size,
              self->key_size);
       // fill front of sib_n->{key,val}s
-      memcpy(sib_n->keys, sib_n->keys + bor_sz * self->key_size,
+      memmove(sib_n->keys, sib_n->keys + bor_sz * self->key_size,
              sib_nkc * self->key_size);
-      memcpy(sib_n->vals, sib_n->vals + bor_sz * ptr_sz,
+      memmove(sib_n->vals, sib_n->vals + bor_sz * ptr_sz,
              (sib_nkc + 1) * ptr_sz);
       // update stats
       node->key_count = kc_sum - sib_nkc;
