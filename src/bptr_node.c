@@ -1135,6 +1135,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
    int err_code; _Bool has_set_err = 0;
    int prev_sib_err = BPTR_E_SUCCESS;
    struct bptr_node *sib_n, *par_n;
+   uint_fast8_t ptr_sz = BPTR_PTR_SIZE;
    bptr_node_ki_t par_v_nodei; ///< index # of node in par_n->vals
    const bptr_node_ki_t kc_threshold = ((node->is_leaf ?
                                          self->node_bound.leaf.low :
@@ -1166,13 +1167,13 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       // reserve space for insert
       memmove(node->keys + it_st * self->key_size, node->keys,
               node->key_count * self->key_size);
-      memmove(node->vals + it_st * self->value_size, node->vals,
-              (node->key_count + 1) * self->value_size);
+      memmove(node->vals + it_st * ptr_sz, node->vals,
+              (node->key_count + 1) * ptr_sz);
       node->key_count = nkc;
       // take vals from sib_n; do NOT reorder as it_st changes in next statement
       memcpy(node->vals,
-             sib_n->vals + (sib_n->key_count + 1) * self->value_size,
-             it_st * self->value_size);
+             sib_n->vals + (sib_n->key_count + 1) * ptr_sz,
+             it_st * ptr_sz);
       // take parent separator key
       memcpy(node->keys + --it_st * self->key_size,
              par_n->keys + par_sepki * self->key_size,
@@ -1210,8 +1211,8 @@ PREV_FETCH_FAILURE:;
       bor_sz = sib_n->key_count - sib_nkc;
 
       // borrow vals from sib_n
-      memcpy(node->vals + (node->key_count + 1) * self->value_size,
-             sib_n->vals, bor_sz * self->value_size);
+      memcpy(node->vals + (node->key_count + 1) * ptr_sz,
+             sib_n->vals, bor_sz * ptr_sz);
       // take separator key from par_n
       memcpy(node->keys + node->key_count++ * self->key_size,
              par_n->keys + par_v_nodei * self->key_size,
@@ -1226,8 +1227,8 @@ PREV_FETCH_FAILURE:;
       // fill front of sib_n->{key,val}s
       memcpy(sib_n->keys, sib_n->keys + bor_sz * self->key_size,
              sib_nkc * self->key_size);
-      memcpy(sib_n->vals, sib_n->vals + bor_sz * self->value_size,
-             (sib_nkc + 1) * self->value_size);
+      memcpy(sib_n->vals, sib_n->vals + bor_sz * ptr_sz,
+             (sib_nkc + 1) * ptr_sz);
       // update stats
       node->key_count = kc_sum - sib_nkc;
       sib_n->key_count = sib_nkc;
