@@ -1135,20 +1135,20 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
    int err_code; _Bool has_set_err = 0;
    int prev_sib_err = BPTR_E_SUCCESS;
    struct bptr_node *sib_n, *par_n;
-   bptr_node_ki_t par_sepki;
+   bptr_node_ki_t par_v_nodei; ///< index # of node in par_n->vals
    const bptr_node_ki_t kc_threshold = ((node->is_leaf ?
                                          self->node_bound.leaf.low :
                                          self->node_bound.brch.low) + 1) * 2;
 
    par_n = bptr_node_fetch(self, node->parent);
    if (par_n == NULL) goto PAR_N_FETCH_ERR;
-   if (_brch_val_search(self, par_n, node->node_idx, &par_sepki) == 0)
+   if (_brch_val_search(self, par_n, node->node_idx, &par_v_nodei) == 0)
       goto NODE_NF_IN_PAR_ERR;
-   par_sepki--;
 
-   if (par_sepki != 0)
+   if (par_v_nodei != 0)
     {
-      bptr_node_ki_t nkc,     ///< New keys Count of node
+      bptr_node_ki_t nkc,        ///< New keys Count of node
+                     par_sepki,  ///< index of separator key in par_n
                      kc_sum, it_st;
 
       // fetch sib_n and ensure it's possible to redistribute
@@ -1161,6 +1161,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       nkc = kc_sum / 2;
       it_st = nkc - node->key_count;
       sib_n->key_count = kc_sum - nkc;
+      par_sepki = par_v_nodei - 1;
 
       // reserve space for insert
       memmove(node->keys + it_st * self->key_size, node->keys,
@@ -1191,9 +1192,10 @@ PREV_SIZE_FAILURE:
 PREV_FETCH_FAILURE:;
     }
 
-   if (par_sepki + 1 < par_n->key_count)  // has right sibling
+   if (par_v_nodei < par_n->key_count)  // has right sibling
     {
-      bptr_node_ki_t sib_nkc,   ///< New keys Count of sib_n
+      // index of separator key == par_v_nodei for right redistribution
+      bptr_node_ki_t sib_nkc, ///< New keys Count of sib_n
                      bor_sz,  ///< # of kvs borrowed from sib_n
                      kc_sum;
 
@@ -1212,13 +1214,13 @@ PREV_FETCH_FAILURE:;
              sib_n->vals, bor_sz * self->value_size);
       // take separator key from par_n
       memcpy(node->keys + node->key_count++ * self->key_size,
-             par_n->keys + par_sepki * self->key_size,
+             par_n->keys + par_v_nodei * self->key_size,
              self->key_size);
       // borrow keys from sib_n
       memcpy(node->keys + node->key_count * self->key_size,
              sib_n->keys, bor_sz - 1);
       // rotate key to parent
-      memcpy(par_n->keys + par_sepki * self->key_size,
+      memcpy(par_n->keys + par_v_nodei * self->key_size,
              sib_n->keys + (bor_sz - 1) * self->key_size,
              self->key_size);
       // fill front of sib_n->{key,val}s
