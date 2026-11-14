@@ -1193,6 +1193,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       memcpy(par_n->keys + par_sepki * self->key_size,
              sib_n->keys + sib_n->key_count * self->key_size, self->key_size);
 
+      node->is_dirty = sib_n->is_dirty = par_n->is_dirty = 1;
       bptr_node_unload(self, sib_n);
       goto SUCCESS_ZONE;
       /*---------------------------- Failure Zone ----------------------------*/
@@ -1261,6 +1262,7 @@ PREV_SIZE_FAILURE:
       node->key_count = kc_sum - sib_nkc;
       sib_n->key_count = sib_nkc;
 
+      node->is_dirty = sib_n->is_dirty = par_n->is_dirty = 1;
       bptr_node_unload(self, sib_n);
       goto SUCCESS_ZONE;
       /*---------------------------- Failure Zone ----------------------------*/
