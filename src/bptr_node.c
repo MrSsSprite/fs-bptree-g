@@ -1130,7 +1130,7 @@ PIN_NODE_ERR:     _set_err_code(bptr_errno);
 
 
 static inline
-int _node_try_redistribute(struct bptr *self, struct bptr_node *node)
+int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 {
    int err_code; _Bool has_set_err = 0;
    int prev_sib_err = BPTR_E_SUCCESS;
