@@ -1236,6 +1236,7 @@ NEXT_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
     }
 
+   bptr_node_unload(self, par_n);
    return BPTR_E_DECLINED;
    /*----------------------------- Success Zone ------------------------------*/
 SUCCESS_ZONE:
