@@ -1129,6 +1129,7 @@ PIN_NODE_ERR:     _set_err_code(bptr_errno);
 }
 
 
+// This function must be called on an underflowed node
 static inline
 int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 {
