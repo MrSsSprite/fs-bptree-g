@@ -19,6 +19,7 @@
 #define BPTR_E_ITRNL_STATE (4)      // Invalid Internal State of struct bptr
 #define BPTR_E_CACHE_FULL  (5)      // Cache pool full and no eviction possible
 #define BPTR_E_FSEEK       (6)      // Failed at fseek (errno is set)
+#define BPTR_E_DECLINED    (0xDEC1) // Operation declined without error
 #define BPTR_E_TODO        (0xBEEF) // Not yet implemented (48879 dec.)
 #define BPTR_E_UNREACHABLE (0xDEAD) // Unreachable (57005 dec.)
 // User & Argument Errors (Negative)
