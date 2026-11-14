@@ -1133,7 +1133,6 @@ static inline
 int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 {
    int err_code; _Bool has_set_err = 0;
-   int prev_sib_err = BPTR_E_SUCCESS;
    struct bptr_node *sib_n, *par_n;
    uint_fast8_t ptr_sz = BPTR_PTR_SIZE;
    bptr_node_ki_t par_v_nodei; ///< index # of node in par_n->vals
@@ -1154,8 +1153,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->prev);
-      if (sib_n == NULL)
-       { prev_sib_err = bptr_errno; goto PREV_FETCH_FAILURE; }
+      if (sib_n == NULL) goto PREV_FETCH_FAILURE;
       kc_sum = node->key_count + sib_n->key_count;
       if (kc_sum < kc_threshold) goto PREV_SIZE_FAILURE;
 
@@ -1190,7 +1188,6 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       /*---------------------------- Failure Zone ----------------------------*/
 PREV_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
-PREV_FETCH_FAILURE:;
     }
 
    if (par_v_nodei < par_n->key_count)  // has right sibling
@@ -1202,8 +1199,7 @@ PREV_FETCH_FAILURE:;
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->next);
-      if (sib_n == NULL)
-       { prev_sib_err = bptr_errno; goto NEXT_FETCH_FAILURE; }
+      if (sib_n == NULL) goto NEXT_FETCH_FAILURE;
       kc_sum = node->key_count + sib_n->key_count;
       if (kc_sum < kc_threshold) goto NEXT_SIZE_FAILURE;
 
@@ -1238,7 +1234,6 @@ PREV_FETCH_FAILURE:;
       /*---------------------------- Failure Zone ----------------------------*/
 NEXT_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
-NEXT_FETCH_FAILURE:;
     }
 
    return BPTR_E_DECLINED;
@@ -1247,6 +1242,8 @@ SUCCESS_ZONE:
    bptr_node_unload(self, par_n);
    return 0;
    /*-------------------------- Error Handling Zone --------------------------*/
+NEXT_FETCH_FAILURE:  _set_err_code(bptr_errno);
+PREV_FETCH_FAILURE:  _set_err_code(bptr_errno);
 NODE_NF_IN_PAR_ERR:  _set_err_code(BPTR_E_ITRNL_STATE);
    bptr_node_unload(self, par_n);
 PAR_N_FETCH_ERR:     _set_err_code(bptr_errno);
