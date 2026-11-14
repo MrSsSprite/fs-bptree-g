@@ -1149,7 +1149,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
     {
       bptr_node_ki_t nkc,        ///< New keys Count of node
                      par_sepki,  ///< index of separator key in par_n
-                     kc_sum, it_st;
+                     kc_sum, it_st, i, i_ed;
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->prev);
@@ -1162,6 +1162,16 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       sib_n->key_count = kc_sum - nkc;
       par_sepki = par_v_nodei - 1;
 
+      // point children to node as new parent
+      for (i = sib_n->key_count + 1, i_ed = i + it_st; i < i_ed; i++)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, sib_n, i));
+         if (child_n == NULL) goto PREV_CHILD_FETCH_ERR;
+         child_n->parent = node->node_idx;
+         child_n->is_dirty = 1;
+         bptr_node_unload(self, child_n);
+       }
       // reserve space for insert
       memmove(node->keys + it_st * self->key_size, node->keys,
               node->key_count * self->key_size);
@@ -1186,6 +1196,18 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
       bptr_node_unload(self, sib_n);
       goto SUCCESS_ZONE;
       /*---------------------------- Failure Zone ----------------------------*/
+PREV_CHILD_FETCH_ERR:   _set_err_code(bptr_errno);
+      while (--i > sib_n->key_count)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, sib_n, i));
+         if (child_n == NULL) { err_code = BPTR_E_FATAL; continue; }
+         child_n->parent = sib_n->node_idx;
+         child_n->is_dirty = 1;
+         bptr_node_unload(self, child_n);
+       }
+      sib_n->key_count += it_st;
+      goto CHILD_FETCH_ERR;
 PREV_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
     }
@@ -1195,7 +1217,7 @@ PREV_SIZE_FAILURE:
       // index of separator key == par_v_nodei for right redistribution
       bptr_node_ki_t sib_nkc, ///< New keys Count of sib_n
                      bor_sz,  ///< # of kvs borrowed from sib_n
-                     kc_sum;
+                     kc_sum, i;
 
       // fetch sib_n and ensure it's possible to redistribute
       sib_n = bptr_node_fetch(self, node->next);
@@ -1207,6 +1229,16 @@ PREV_SIZE_FAILURE:
       bor_sz = sib_n->key_count - sib_nkc;
 
       // borrow vals from sib_n
+      // point children to node as new parent
+      for (i = 0; i < bor_sz; i++)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, sib_n, i));
+         if (child_n == NULL) goto NEXT_CHILD_FETCH_ERR;
+         child_n->parent = node->node_idx;
+         child_n->is_dirty = 1;
+         bptr_node_unload(self, child_n);
+       }
       memcpy(node->vals + (node->key_count + 1) * ptr_sz,
              sib_n->vals, bor_sz * ptr_sz);
       // take separator key from par_n
@@ -1222,9 +1254,9 @@ PREV_SIZE_FAILURE:
              self->key_size);
       // fill front of sib_n->{key,val}s
       memmove(sib_n->keys, sib_n->keys + bor_sz * self->key_size,
-             sib_nkc * self->key_size);
+              sib_nkc * self->key_size);
       memmove(sib_n->vals, sib_n->vals + bor_sz * ptr_sz,
-             (sib_nkc + 1) * ptr_sz);
+              (sib_nkc + 1) * ptr_sz);
       // update stats
       node->key_count = kc_sum - sib_nkc;
       sib_n->key_count = sib_nkc;
@@ -1232,6 +1264,17 @@ PREV_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
       goto SUCCESS_ZONE;
       /*---------------------------- Failure Zone ----------------------------*/
+NEXT_CHILD_FETCH_ERR:   _set_err_code(bptr_errno);
+      while (i-- > 0)
+       {
+         struct bptr_node *child_n =
+            bptr_node_fetch(self, _node_brch_vals_get(self, sib_n, i));
+         if (child_n == NULL) { err_code = BPTR_E_FATAL; continue; }
+         child_n->parent = sib_n->node_idx;
+         child_n->is_dirty = 1;
+         bptr_node_unload(self, child_n);
+       }
+      goto CHILD_FETCH_ERR;
 NEXT_SIZE_FAILURE:
       bptr_node_unload(self, sib_n);
     }
@@ -1243,6 +1286,8 @@ SUCCESS_ZONE:
    bptr_node_unload(self, par_n);
    return 0;
    /*-------------------------- Error Handling Zone --------------------------*/
+CHILD_FETCH_ERR:
+   bptr_node_unload(self, sib_n);
 SIB_FETCH_ERR:       _set_err_code(bptr_errno);
 NODE_NF_IN_PAR_ERR:  _set_err_code(BPTR_E_ITRNL_STATE);
    bptr_node_unload(self, par_n);
