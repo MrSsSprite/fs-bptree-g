@@ -1130,6 +1130,8 @@ PIN_NODE_ERR:     _set_err_code(bptr_errno);
 
 
 // This function must be called on an underflowed node
+// This function only accepts branch node. Nevertheless, whether node is not
+// leaf is not checked as it's considered caller's responsibility.
 static inline
 int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
 {
@@ -1137,9 +1139,7 @@ int _brch_try_redistribute(struct bptr *self, struct bptr_node *node)
    struct bptr_node *sib_n, *par_n;
    uint_fast8_t ptr_sz = BPTR_PTR_SIZE;
    bptr_node_ki_t par_v_nodei; ///< index # of node in par_n->vals
-   const bptr_node_ki_t kc_threshold = ((node->is_leaf ?
-                                         self->node_bound.leaf.low :
-                                         self->node_bound.brch.low) + 1) * 2;
+   const bptr_node_ki_t kc_threshold = (self->node_bound.brch.low + 1) * 2;
 
    par_n = bptr_node_fetch(self, node->parent);
    if (par_n == NULL) goto PAR_N_FETCH_ERR;
