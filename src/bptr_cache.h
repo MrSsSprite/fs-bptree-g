@@ -6,14 +6,20 @@
 #include "bptr_internal.h"
 /*--------------------------- Public Includes END ----------------------------*/
 
+/*------------------------------ Public Defines ------------------------------*/
+#define BPTR_CACHE_POOL_MIN   (8u)
+/*---------------------------- Public Defines END ----------------------------*/
+
 /*----------------------------- Public Functions -----------------------------*/
 /**
  * @brief   Initialize cache and put it into @p self
  *
- * @param[in,out] self  bptr struct that will hold the initialized @c cache.
- *                      Also, this function reads @c node_bound from this
- *                      struct.
- * @param[in]     pool_cap cache pool capacity in # of nodes.
+ * @param[in,out] self     bptr struct that will hold the initialized @c cache.
+ *                         Also, this function reads @c node_bound from this
+ *                         struct.
+ * @param[in]     pool_cap cache pool capacity in # of nodes. @p pool_cap must
+ *                         be >= (@c BPTR_CACHE_POOL_MIN &&
+ *                         <tt>self->heigt * 2</tt>).
  *
  * @return  error code
  * @retval  0  Success

@@ -1,4 +1,5 @@
 /*----------------------------- Public Includes ------------------------------*/
+#include "bptr_cache.h"
 #include "bptr_internal.h"
 #include "bptr_node.h"
 #include "bptr_utils.h"
@@ -97,7 +98,8 @@ int bptr_cache_init(struct bptr *self, uint64_t pool_cap)
    // Necessary. the result of clz is undefined if input is 0.
    // Or, if msb is set, no valid value represented in uint64_t can contain it
    // given capacity is restricted to be power of 2.
-   if (pool_cap == 0 || pool_cap & (uint64_t)1 << 63) goto INVALID_INPUT;
+   if (pool_cap < BPTR_CACHE_POOL_MIN || pool_cap < self->height * 2 ||
+       pool_cap & (uint64_t)1 << 63) goto INVALID_INPUT;
 
    cache = malloc(sizeof (struct bptr_cache));
    if (cache == NULL) goto MALLOC_ERR;
