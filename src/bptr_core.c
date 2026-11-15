@@ -52,7 +52,7 @@ struct bptr *bptr_init
    int (*compare)(const void *lhs, const void *rhs)
 )
 {
-   _Bool has_set_err = 0;
+   int err_code; _Bool has_set_err = 0;
    struct bptr *self;
 
    /* Node must be large enough to at least contain
@@ -80,7 +80,7 @@ struct bptr *bptr_init
    self->height = 0;
    self->compare = compare;
 
-   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
+   if ((err_code = bptr_cache_init(self, cache_capacity))) goto CACHE_INIT_ERR;
 
    /* Construct the file */
    if (bptr_io_fcreat(self, filename))
@@ -94,7 +94,7 @@ struct bptr *bptr_init
 FOPEN_ERR:           _set_errno(BPTR_E_FACCESS);
    //TODO: deinit Error handle
    bptr_cache_deinit(self);
-CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+CACHE_INIT_ERR:      _set_errno(err_code);
 INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    free(self);
 BPTR_MALLOC_ERR:     _set_errno(BPTR_E_OOM);
@@ -106,7 +106,7 @@ INVALID_SIZE_ERR:    _set_errno(BPTR_E_FN_INPUT);
 struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
                        int (*compare)(const void *lhs, const void *rhs))
 {
-   _Bool has_set_err = 0;
+   int err_code; _Bool has_set_err = 0;
    struct bptr *self;
    int fn_ret;
 
@@ -121,14 +121,14 @@ struct bptr *bptr_load(const char *filename, uint64_t cache_capacity,
    _bptr_bound_set(self);
    self->compare = compare;
 
-   if (bptr_cache_init(self, cache_capacity)) goto CACHE_INIT_ERR;
+   if ((err_code = bptr_cache_init(self, cache_capacity))) goto CACHE_INIT_ERR;
 
    return self;
 
    /*-------------------------- Error Handling Zone --------------------------*/
    //TODO: deinit Error handle
    bptr_cache_deinit(self);
-CACHE_INIT_ERR:      _set_errno(BPTR_E_OOM);
+CACHE_INIT_ERR:      _set_errno(err_code);
 INVALID_FANOUT_ERR:  _set_errno(BPTR_E_FN_INPUT);
    bptr_io_fclose(self);
 FLOAD_ERR:           _set_errno(BPTR_E_FACCESS);
